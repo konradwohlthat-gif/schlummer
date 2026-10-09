@@ -67,9 +67,12 @@ Staffel etwa gleich) plus 31 Sekunden Logo-Nachlauf. Nur eine Ladepause. Die
 Werte stehen fest in `src/adapters/disney.js` unter `INTRO_PROFILES`; dort
 lassen sich weitere Serien eintragen.
 
-Hat eine Folge davor eine Zusammenfassung (etwa S11E5 „200 Folgen später"),
-wird deren Knopf „Zusammenfassung überspringen" ganz normal geklickt; das
-Intro danach bekommt wieder den Direktsprung.
+Einzelne Folgen haben davor eine Zusammenfassung ohne eigenen Knopf (S11E5
+„200 Folgen später": 26 Sekunden). Für solche Folgen steht in `EPISODE_PROFILES`
+das Ende der Zusammenfassung; am Folgenanfang springt das Skript dann in einem
+Zug über Zusammenfassung, Intro und Logo (bei S11E5 auf Sekunde 70). Beim
+Wiedereinstieg mitten in der Folge passiert nichts. Zeigt Disney+ doch einen
+Knopf „Zusammenfassung überspringen", wird er normal geklickt.
 
 ### Einstellungen unter „Mehr"
 

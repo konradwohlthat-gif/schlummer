@@ -26,6 +26,53 @@ export const INTRO_PROFILES = { 'family guy': { marker: 13, extra: 31 } };
 const SEEK_VERIFY_MS = 1200;
 let introHandledKey = null;
 
+// Einzelne Folgen mit Zusammenfassung ohne eigenen Überspringen-Knopf: am Folgenanfang
+// in einem Zug an recapEnd + marker + extra der Serie springen.
+// Schlüssel = Disney-Play-ID (de-de); `title` ist ein Fallback über den Folgentitel.
+export const EPISODE_PROFILES = {
+  'ba34eea6-d42d-43ef-ba63-46e332ea5614': { series: 'family guy', title: /200 Folgen sp\u00e4ter/i, recapEnd: 26 },
+};
+const START_JUMP_MAX_POS = 5;      // nur, wenn die Folge wirklich am Anfang steht
+const START_JUMP_TIMEOUT_MS = 12000;
+let startJump = null;              // { key, target, since }
+
+function episodeTitleText() {
+  for (const r of shadowRoots('title-overlay')) {
+    const t = (r.textContent || '').replace(/\s+/g, ' ').trim();
+    if (t) return t;
+  }
+  return '';
+}
+
+function episodeProfile(key) {
+  if (key && EPISODE_PROFILES[key]) return EPISODE_PROFILES[key];
+  const title = episodeTitleText();
+  if (!title) return null;
+  const name = seriesName();
+  return Object.values(EPISODE_PROFILES).find((p) => p.series === name && p.title && p.title.test(title)) || null;
+}
+
+/** Jeden Tick aufrufen: Folgenanfang-Sprung für bekannte Folgen ausführen. */
+function tickStartJump(key) {
+  if (startJump && startJump.key !== key) startJump = null;
+  if (!startJump) {
+    const prof = episodeProfile(key);
+    if (!prof) return;
+    const series = INTRO_PROFILES[prof.series] || { marker: 0, extra: 0 };
+    startJump = { key, target: prof.recapEnd + series.marker + series.extra, since: Date.now(), done: false };
+  }
+  if (startJump.done) return;
+  if (Date.now() - startJump.since > START_JUMP_TIMEOUT_MS) { startJump.done = true; return; }
+  wakeControls(true);
+  const info = sliderInfo();
+  if (!info || info.now === null) return;
+  if (info.now > START_JUMP_MAX_POS) { startJump.done = true; return; } // Wiedereinstieg, nicht springen
+  if (seekViaSlider(startJump.target)) {
+    startJump.done = true;
+    introHandledKey = key; // Intro liegt hinter dem Sprung
+  }
+}
+
 // Zusammenfassung ("Rückblick"/"Zusammenfassung überspringen") vs. Intro: beides
 // erscheint in skip-overlay, unterschieden am Knopftext.
 const RECAP_RE = /zusammenfassung|r\u00fcckblick|recap|previously|bisher/i;
@@ -213,6 +260,7 @@ export const disney = {
     const t = Date.now();
     const key = disney.episodeId();
     if (key !== skipState.key) skipState = { key, firstSeenAt: t, lastAbsentAt: t };
+    tickStartJump(key);
     const b = shadowButton('skip-overlay');
     if (!b || isRecapButton(b)) { skipState.lastAbsentAt = t; return null; }
     return b;

@@ -1,6 +1,6 @@
 {
   "name": "schlummer",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Einschlafhilfe für Netflix und Disney+ als Safari-Userscript",
   "private": true,
   "type": "module",

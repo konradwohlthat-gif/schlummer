@@ -256,9 +256,12 @@ nur eine Ladepause entsteht. Umsetzung im Disney-Adapter:
   springt das Skript ohne Klick per Zeigerereignis auf den Regler direkt an
   `Position + marker + extra`. Nicht frisch (etwa Wiedereinstieg mitten im
   Intro): Knopf klicken, `extra` nachziehen.
-- Zusammenfassung vor dem Intro (z. B. S11E5 „200 Folgen später"): Knopftext
-  in `skip-overlay` wird geprüft (`zusammenfassung|rückblick|recap`); solche
-  Knöpfe werden normal geklickt und zählen nicht als Intro. Mechanik live bestätigt (1 s → 29 s in einem
+- Zusammenfassung vor dem Intro: Zeigt Disney+ einen Knopf, wird er am Text
+  erkannt (`zusammenfassung|rückblick|recap`) und normal geklickt. S11E5
+  „200 Folgen später" hat keinen Knopf (Zusammenfassung 0 bis 26 s, dann Intro-
+  Marker). Dafür `EPISODE_PROFILES` (Play-ID, Fallback Folgentitel aus
+  `title-overlay`): am Folgenanfang (Position ≤ 5 s) ein Sprung an
+  `recapEnd + marker + extra` = 70 s; beim Wiedereinstieg nichts. Mechanik live bestätigt (1 s → 29 s in einem
   Schritt mit den früheren Werten 13 + 15).
 - Fallback, wenn der Regler nicht lesbar ist oder die Folge nicht am Anfang
   steht: Knopf klicken, danach `extra` nachziehen.

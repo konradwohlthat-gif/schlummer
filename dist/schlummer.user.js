@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Schlummer
 // @namespace    https://github.com/konradwohlthat-gif/schlummer
-// @version      1.3.0
+// @version      1.4.0
 // @description  Einschlafhilfe für Netflix und Disney+: Bild und Ton werden über eine einstellbare Anzahl Folgen langsam ausgeblendet, Intro und Abspann werden übersprungen.
 // @author       Konrad Wohlthat
 // @license      MIT
@@ -53,6 +53,51 @@
   var INTRO_PROFILES = { "family guy": { marker: 13, extra: 31 } };
   var SEEK_VERIFY_MS = 1200;
   var introHandledKey = null;
+  var EPISODE_PROFILES = {
+    "ba34eea6-d42d-43ef-ba63-46e332ea5614": { series: "family guy", title: /200 Folgen sp\u00e4ter/i, recapEnd: 26 }
+  };
+  var START_JUMP_MAX_POS = 5;
+  var START_JUMP_TIMEOUT_MS = 12e3;
+  var startJump = null;
+  function episodeTitleText() {
+    for (const r of shadowRoots("title-overlay")) {
+      const t = (r.textContent || "").replace(/\s+/g, " ").trim();
+      if (t) return t;
+    }
+    return "";
+  }
+  function episodeProfile(key) {
+    if (key && EPISODE_PROFILES[key]) return EPISODE_PROFILES[key];
+    const title = episodeTitleText();
+    if (!title) return null;
+    const name = seriesName();
+    return Object.values(EPISODE_PROFILES).find((p) => p.series === name && p.title && p.title.test(title)) || null;
+  }
+  function tickStartJump(key) {
+    if (startJump && startJump.key !== key) startJump = null;
+    if (!startJump) {
+      const prof = episodeProfile(key);
+      if (!prof) return;
+      const series = INTRO_PROFILES[prof.series] || { marker: 0, extra: 0 };
+      startJump = { key, target: prof.recapEnd + series.marker + series.extra, since: Date.now(), done: false };
+    }
+    if (startJump.done) return;
+    if (Date.now() - startJump.since > START_JUMP_TIMEOUT_MS) {
+      startJump.done = true;
+      return;
+    }
+    wakeControls(true);
+    const info = sliderInfo();
+    if (!info || info.now === null) return;
+    if (info.now > START_JUMP_MAX_POS) {
+      startJump.done = true;
+      return;
+    }
+    if (seekViaSlider(startJump.target)) {
+      startJump.done = true;
+      introHandledKey = key;
+    }
+  }
   var RECAP_RE = /zusammenfassung|r\u00fcckblick|recap|previously|bisher/i;
   var FRESH_MAX_MS = 1e3;
   var EPISODE_WARMUP_MS = 1500;
@@ -222,6 +267,7 @@
       const t = Date.now();
       const key = disney.episodeId();
       if (key !== skipState.key) skipState = { key, firstSeenAt: t, lastAbsentAt: t };
+      tickStartJump(key);
       const b = shadowButton("skip-overlay");
       if (!b || isRecapButton(b)) {
         skipState.lastAbsentAt = t;
