@@ -104,7 +104,8 @@
       const vids = [...document.querySelectorAll("video")];
       return vids.find((v) => /^hivePlayer\d+$/.test(v.id) || v.classList.contains("hive-video")) || vids.find((v) => v.readyState > 0) || vids[0] || null;
     },
-    getDuration: (video) => {
+    /** `wake`: Steuerleiste wecken dürfen (nur im Schlafmodus, sonst flackert sie für den Zuschauer). */
+    getDuration: (video, { wake = false } = {}) => {
       if (video && Number.isFinite(video.duration) && video.duration > 0) return video.duration;
       const key = disney.episodeId();
       const slider = readSlider();
@@ -113,10 +114,10 @@
         return slider.max;
       }
       if (key && durationCache.has(key)) return durationCache.get(key);
-      wakeControls();
+      if (wake) wakeControls();
       return NaN;
     },
-    getPosition: (video) => {
+    getPosition: (video, { wake = false } = {}) => {
       if (!video) return 0;
       const key = disney.episodeId();
       if (key !== pos.key) pos = { key, offset: 0, lastRel: null, synced: false };
@@ -130,7 +131,7 @@
       }
       if (pos.lastRel !== null && rel < pos.lastRel - 2) pos.synced = false;
       pos.lastRel = rel;
-      if (!pos.synced) wakeControls();
+      if (!pos.synced && wake) wakeControls();
       return Math.max(0, rel + pos.offset);
     },
     findSkipIntro: () => shadowButton("skip-overlay"),
@@ -700,8 +701,9 @@
       if (log.length > 60) log.shift();
     }
     const clickedAt = /* @__PURE__ */ new WeakMap();
-    const durationOf = (v) => adapter.getDuration ? adapter.getDuration(v) : v.duration;
-    const positionOf = (v) => adapter.getPosition ? adapter.getPosition(v) : v.currentTime || 0;
+    let wakeAllowed = false;
+    const durationOf = (v) => adapter.getDuration ? adapter.getDuration(v, { wake: wakeAllowed }) : v.duration;
+    const positionOf = (v) => adapter.getPosition ? adapter.getPosition(v, { wake: wakeAllowed }) : v.currentTime || 0;
     const hasMeta = (v) => {
       if (!v) return false;
       const d = durationOf(v);
@@ -753,6 +755,7 @@
       return { active: true, text: `Folge ${idx} von ${session.totalPlanned} · ${Math.round(p * 100)} %${paused}` };
     }
     function startSleep(attempt = 0) {
+      wakeAllowed = true;
       if (!video || !hasMeta(video)) {
         if (attempt < 4) {
           setTimeout(() => {
@@ -994,6 +997,7 @@
       const v = adapter.getVideo();
       const key = adapter.episodeId() || (v ? "el" : null);
       if (v !== video || key !== episodeKey) onVideoChange(v, key);
+      wakeAllowed = !!session;
       if (video && hasMeta(video)) {
         if (session && !session.done) {
           if (pendingSwitch) {

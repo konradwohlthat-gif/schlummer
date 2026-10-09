@@ -49,8 +49,10 @@ export function startController({ adapter, settings, doc = document, win = windo
   const clickedAt = new WeakMap();
 
   // ---------- Hilfen ----------
-  const durationOf = (v) => (adapter.getDuration ? adapter.getDuration(v) : v.duration);
-  const positionOf = (v) => (adapter.getPosition ? adapter.getPosition(v) : v.currentTime || 0);
+  // Adapter dürfen die Steuerleiste nur wecken, wenn eine Sitzung läuft oder gestartet wird.
+  let wakeAllowed = false;
+  const durationOf = (v) => (adapter.getDuration ? adapter.getDuration(v, { wake: wakeAllowed }) : v.duration);
+  const positionOf = (v) => (adapter.getPosition ? adapter.getPosition(v, { wake: wakeAllowed }) : v.currentTime || 0);
   const hasMeta = (v) => { if (!v) return false; const d = durationOf(v); return Number.isFinite(d) && d > 0; };
   const stats = (v) => ({ duration: hasMeta(v) ? durationOf(v) : 0, currentTime: positionOf(v), ended: !!(v.ended || endedFlag) });
   const visible = (el) => !!el && el.isConnected && el.getClientRects().length > 0;
@@ -103,6 +105,7 @@ export function startController({ adapter, settings, doc = document, win = windo
 
   // ---------- Schlafmodus ----------
   function startSleep(attempt = 0) {
+    wakeAllowed = true;
     if (!video || !hasMeta(video)) {
       // Disney+ liefert die Dauer erst, wenn die Steuerleiste gerendert ist (Adapter weckt sie).
       if (attempt < 4) { setTimeout(() => { if (!session) startSleep(attempt + 1); }, 400); return; }
@@ -347,6 +350,7 @@ export function startController({ adapter, settings, doc = document, win = windo
     const v = adapter.getVideo();
     const key = adapter.episodeId() || (v ? 'el' : null);
     if (v !== video || key !== episodeKey) onVideoChange(v, key);
+    wakeAllowed = !!session;
 
     if (video && hasMeta(video)) {
       if (session && !session.done) {

@@ -78,7 +78,8 @@ export const disney = {
       vids[0] || null
     );
   },
-  getDuration: (video) => {
+  /** `wake`: Steuerleiste wecken dürfen (nur im Schlafmodus, sonst flackert sie für den Zuschauer). */
+  getDuration: (video, { wake = false } = {}) => {
     if (video && Number.isFinite(video.duration) && video.duration > 0) return video.duration;
     const key = disney.episodeId();
     const slider = readSlider();
@@ -87,10 +88,10 @@ export const disney = {
       return slider.max;
     }
     if (key && durationCache.has(key)) return durationCache.get(key);
-    wakeControls();
+    if (wake) wakeControls();
     return NaN;
   },
-  getPosition: (video) => {
+  getPosition: (video, { wake = false } = {}) => {
     if (!video) return 0;
     const key = disney.episodeId();
     if (key !== pos.key) pos = { key, offset: 0, lastRel: null, synced: false };
@@ -104,7 +105,7 @@ export const disney = {
     }
     if (pos.lastRel !== null && rel < pos.lastRel - 2) pos.synced = false; // neues Puffer-Fenster
     pos.lastRel = rel;
-    if (!pos.synced) wakeControls();
+    if (!pos.synced && wake) wakeControls();
     return Math.max(0, rel + pos.offset);
   },
   findSkipIntro: () => shadowButton('skip-overlay'),
