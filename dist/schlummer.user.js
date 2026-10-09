@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Schlummer
 // @namespace    https://github.com/konradwohlthat-gif/schlummer
-// @version      1.2.0
+// @version      1.3.0
 // @description  Einschlafhilfe für Netflix und Disney+: Bild und Ton werden über eine einstellbare Anzahl Folgen langsam ausgeblendet, Intro und Abspann werden übersprungen.
 // @author       Konrad Wohlthat
 // @license      MIT
@@ -50,10 +50,16 @@
   // src/adapters/disney.js
   var WAKE_EVERY_MS = 4e3;
   var lastWake = 0;
-  var INTRO_PROFILES = { "family guy": { marker: 13, extra: 25 } };
+  var INTRO_PROFILES = { "family guy": { marker: 13, extra: 31 } };
   var SEEK_VERIFY_MS = 1200;
-  var FRESH_START_SEC = 20;
   var introHandledKey = null;
+  var RECAP_RE = /zusammenfassung|r\u00fcckblick|recap|previously|bisher/i;
+  var FRESH_MAX_MS = 1e3;
+  var EPISODE_WARMUP_MS = 1500;
+  var skipState = { key: null, firstSeenAt: 0, lastAbsentAt: 0 };
+  function isRecapButton(b) {
+    return RECAP_RE.test((b.textContent || "") + " " + (b.getAttribute("aria-label") || ""));
+  }
   var durationCache = /* @__PURE__ */ new Map();
   var pos = { key: null, offset: 0, lastRel: null, synced: false };
   function shadowRoots(tag) {
@@ -212,7 +218,17 @@
       if (!pos.synced && wake) wakeControls();
       return Math.max(0, rel + pos.offset);
     },
-    findSkipIntro: () => shadowButton("skip-overlay"),
+    findSkipIntro: () => {
+      const t = Date.now();
+      const key = disney.episodeId();
+      if (key !== skipState.key) skipState = { key, firstSeenAt: t, lastAbsentAt: t };
+      const b = shadowButton("skip-overlay");
+      if (!b || isRecapButton(b)) {
+        skipState.lastAbsentAt = t;
+        return null;
+      }
+      return b;
+    },
     /**
      * Intro-Knopf sichtbar. Für Serien mit Logo-Nachlauf (INTRO_PROFILES): bei
      * Folgenbeginn in einem Zug per Regler um marker + extra springen, ohne den
@@ -226,16 +242,21 @@
       const key = disney.episodeId();
       if (introHandledKey === key) return "erledigt";
       introHandledKey = key;
+      const t = Date.now();
+      const fresh = t - skipState.lastAbsentAt < FRESH_MAX_MS && t - skipState.firstSeenAt > EPISODE_WARMUP_MS;
       wakeControls(true);
       setTimeout(() => {
         const info = sliderInfo();
         const p0 = info && info.now !== null ? info.now : null;
-        if (p0 !== null && p0 < FRESH_START_SEC && seekViaSlider(p0 + profile.marker + profile.extra)) return;
+        if (fresh && p0 !== null && seekViaSlider(p0 + profile.marker + profile.extra)) return;
         if (clickOnce(el)) setTimeout(() => seekBy(profile.extra), 900);
       }, 350);
-      return "direkt";
+      return fresh ? "direkt" : "klick+nachlauf";
     },
-    findSkipRecap: () => null,
+    findSkipRecap: () => {
+      const b = shadowButton("skip-overlay");
+      return b && isRecapButton(b) ? b : null;
+    },
     findNextEpisode: () => {
       for (const r of shadowRoots("end-card-overlay")) {
         const tile = r.querySelector("button.end-card-overlay__content-tile");

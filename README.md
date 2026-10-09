@@ -61,11 +61,15 @@ Schlummer-Panel. Z schließt es wieder, ebenso ein Klick daneben.
 ### Family Guy auf Disney+
 
 Disneys Intro-Marker endet bei Family Guy, bevor das Logo durch ist. Sobald
-der Intro-Knopf bei Folgenbeginn erscheint, springt das Skript deshalb ohne
-Klick in einem Zug um 38 Sekunden: 13 Sekunden (so weit springt Disneys
-eigener Marker, in jeder Staffel etwa gleich) plus 25 Sekunden Logo-Nachlauf.
-Nur eine Ladepause. Die Werte stehen fest in `src/adapters/disney.js` unter
-`INTRO_PROFILES`; dort lassen sich weitere Serien eintragen.
+der Intro-Knopf erscheint, springt das Skript deshalb ohne Klick in einem Zug
+um 44 Sekunden: 13 Sekunden (so weit springt Disneys eigener Marker, in jeder
+Staffel etwa gleich) plus 31 Sekunden Logo-Nachlauf. Nur eine Ladepause. Die
+Werte stehen fest in `src/adapters/disney.js` unter `INTRO_PROFILES`; dort
+lassen sich weitere Serien eintragen.
+
+Hat eine Folge davor eine Zusammenfassung (etwa S11E5 „200 Folgen später"),
+wird deren Knopf „Zusammenfassung überspringen" ganz normal geklickt; das
+Intro danach bekommt wieder den Direktsprung.
 
 ### Einstellungen unter „Mehr"
 

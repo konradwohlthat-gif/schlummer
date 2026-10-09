@@ -247,12 +247,18 @@ weiter; diese sollen mit dem Intro in einem Sprung übersprungen werden, damit
 nur eine Ladepause entsteht. Umsetzung im Disney-Adapter:
 
 - Tabelle `INTRO_PROFILES` (Serienname aus `document.title` → `{ marker, extra }`),
-  derzeit `family guy: { marker: 13, extra: 25 }`. `marker` ist fest
+  derzeit `family guy: { marker: 13, extra: 31 }`. `marker` ist fest
   eingetragen (Disneys Sprungweite, gemessen 13 s, in jeder Staffel etwa
-  gleich), `extra` der Logo-Nachlauf (Nutzerwunsch vom 2026-10-09: 25 s).
-- Erscheint der Knopf bei Folgenbeginn (Position < 20 s), springt das Skript
-  ohne Klick per Zeigerereignis auf den Regler direkt an
-  `Position + marker + extra`. Mechanik live bestätigt (1 s → 29 s in einem
+  gleich), `extra` der Logo-Nachlauf (Nutzerwunsch vom 2026-10-09: 25 s,
+  später 31 s).
+- Erscheint der Intro-Knopf frisch (im vorherigen Tick noch nicht da, Folge
+  seit mehr als 1,5 s geladen), liegt die Position am Markeranfang; dann
+  springt das Skript ohne Klick per Zeigerereignis auf den Regler direkt an
+  `Position + marker + extra`. Nicht frisch (etwa Wiedereinstieg mitten im
+  Intro): Knopf klicken, `extra` nachziehen.
+- Zusammenfassung vor dem Intro (z. B. S11E5 „200 Folgen später"): Knopftext
+  in `skip-overlay` wird geprüft (`zusammenfassung|rückblick|recap`); solche
+  Knöpfe werden normal geklickt und zählen nicht als Intro. Mechanik live bestätigt (1 s → 29 s in einem
   Schritt mit den früheren Werten 13 + 15).
 - Fallback, wenn der Regler nicht lesbar ist oder die Folge nicht am Anfang
   steht: Knopf klicken, danach `extra` nachziehen.
