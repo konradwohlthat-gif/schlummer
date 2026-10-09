@@ -163,3 +163,14 @@ geprüft. Offen auf Wunsch des Nutzers: Netflix „Schaust du noch?" live.
 isolierten Welt, Dialog nachgebaut. Netflix und Disney+: ohne Sitzung 0 Klicks,
 mit Sitzung Klick auf „Weiter", „Schließen" nie geklickt. Live-Beobachtung der
 echten Dialoge bleibt aus (Nutzerwunsch, Dauer).
+
+## Family Guy Logo-Nachlauf (2026-10-09, 18:00)
+
+- Disney+ zeigt den Intro-Knopf bei Family Guy nicht in jeder Folge (S11E1:
+  nie; S11E2/E3: ab Sekunde 1 für etwa 10 s). Markup: `skip-overlay` →
+  `div.skip-overlay` → `skip-button` (eigenes Shadow DOM) → `button`.
+- Regler-Sprung per synthetischem pointerdown/up auf `root.elementFromPoint`
+  im Shadow DOM der Steuerleiste: präzise (156 → 171 gemessen).
+- Durchlauf 1 (S11E2): Modus „klick+lernen", gelernt 13 s, danach +15 s.
+- Durchlauf 2 (S11E3): Modus „direkt", Position 1 → 29 in einem Schritt.
+- Nebenwirkung: Family-Guy-Position des Haushalts steht jetzt bei S11E3.
