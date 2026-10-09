@@ -19,8 +19,24 @@ let lastWake = 0;
 // die direkt nach dem Intro-Sprung in einem Rutsch übersprungen werden.
 // Schlüssel = Serienname aus document.title ("Family Guy | Disney+"), kleingeschrieben.
 export const INTRO_EXTRA_SEC = { 'family guy': 15 };
-const INTRO_EXTRA_DELAY_MS = 900;   // Disney braucht einen Moment für den Intro-Sprung
 const SEEK_VERIFY_MS = 1200;
+const LEARN_KEY = 'schlummer.learned';   // gelernte Intro-Längen je Serie (localStorage)
+const FRESH_START_SEC = 20;              // Direktsprung nur, wenn die Folge gerade erst begonnen hat
+let introHandledKey = null;
+
+function loadLearned() {
+  try { return JSON.parse(localStorage.getItem(LEARN_KEY) || '{}') || {}; } catch { return {}; }
+}
+function saveLearned(o) {
+  try { localStorage.setItem(LEARN_KEY, JSON.stringify(o)); } catch { /* optional */ }
+}
+function waitFor(cond, timeoutMs, stepMs = 100) {
+  return new Promise((resolve) => {
+    const t0 = Date.now();
+    const tick = () => { if (cond()) resolve(true); else if (Date.now() - t0 > timeoutMs) resolve(false); else setTimeout(tick, stepMs); };
+    tick();
+  });
+}
 const durationCache = new Map(); // episodeId → Sekunden
 let pos = { key: null, offset: 0, lastRel: null, synced: false };
 
@@ -68,6 +84,11 @@ function wakeControls(force = false) {
   try {
     target.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, composed: true, clientX: 10, clientY: 10 }));
   } catch { /* ignorieren */ }
+}
+
+function learned_mode(name) {
+  const l = loadLearned()[name];
+  return l > 5 ? 'direkt' : 'klick+lernen';
 }
 
 function seriesName() {
@@ -193,11 +214,42 @@ export const disney = {
     return Math.max(0, rel + pos.offset);
   },
   findSkipIntro: () => shadowButton('skip-overlay'),
-  /** Nach dem Intro-Klick: bei bekannten Serien zusätzlich vorspulen (Logo läuft weiter). */
-  afterIntroSkip: () => {
-    const extra = INTRO_EXTRA_SEC[seriesName()] || 0;
-    if (extra > 0) setTimeout(() => seekBy(extra), INTRO_EXTRA_DELAY_MS);
-    return extra;
+  /**
+   * Intro-Knopf sichtbar. Für Serien mit Logo-Nachlauf (INTRO_EXTRA_SEC):
+   * - kennt das Skript die Sprungweite von Disneys Marker schon (gelernt), springt es
+   *   in einem Zug per Regler an Marker-Ende + Nachlauf, ohne den Knopf zu klicken;
+   * - sonst klickt es den Knopf, misst die Sprungweite, merkt sie sich und zieht den
+   *   Nachlauf einmalig nach.
+   * Gibt false zurück, wenn der Controller normal klicken soll.
+   */
+  handleSkipIntro: (el, clickOnce) => {
+    const name = seriesName();
+    const extra = INTRO_EXTRA_SEC[name] || 0;
+    if (!extra) return false;
+    const key = disney.episodeId();
+    if (introHandledKey === key) return 'erledigt';
+    introHandledKey = key;
+    wakeControls(true);
+    setTimeout(async () => {
+      const info = sliderInfo();
+      const p0 = info && info.now !== null ? info.now : null;
+      const learned = loadLearned()[name];
+      if (p0 !== null && learned > 5 && p0 < FRESH_START_SEC) {
+        seekViaSlider(p0 + learned + extra);
+        return;
+      }
+      if (!clickOnce(el)) return;
+      // Disneys Sprung abwarten (Regler wandert), dann Länge lernen und Nachlauf anhängen
+      const moved = await waitFor(() => { wakeControls(true); const i = sliderInfo(); return !!(i && i.now !== null && p0 !== null && i.now > p0 + 5); }, 4000, 150);
+      if (moved && p0 !== null) {
+        const after = sliderInfo();
+        const o = loadLearned();
+        o[name] = Math.round((after.now - p0) * 10) / 10;
+        saveLearned(o);
+      }
+      seekBy(extra);
+    }, 350);
+    return learned_mode(name);
   },
   findSkipRecap: () => null,
   findNextEpisode: () => {
