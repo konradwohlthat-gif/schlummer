@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Schlummer
 // @namespace    https://github.com/konradwohlthat-gif/schlummer
-// @version      1.1.0
+// @version      1.2.0
 // @description  Einschlafhilfe für Netflix und Disney+: Bild und Ton werden über eine einstellbare Anzahl Folgen langsam ausgeblendet, Intro und Abspann werden übersprungen.
 // @author       Konrad Wohlthat
 // @license      MIT
@@ -50,35 +50,10 @@
   // src/adapters/disney.js
   var WAKE_EVERY_MS = 4e3;
   var lastWake = 0;
-  var INTRO_EXTRA_SEC = { "family guy": 15 };
+  var INTRO_PROFILES = { "family guy": { marker: 13, extra: 25 } };
   var SEEK_VERIFY_MS = 1200;
-  var LEARN_KEY = "schlummer.learned";
   var FRESH_START_SEC = 20;
   var introHandledKey = null;
-  function loadLearned() {
-    try {
-      return JSON.parse(localStorage.getItem(LEARN_KEY) || "{}") || {};
-    } catch {
-      return {};
-    }
-  }
-  function saveLearned(o) {
-    try {
-      localStorage.setItem(LEARN_KEY, JSON.stringify(o));
-    } catch {
-    }
-  }
-  function waitFor(cond, timeoutMs, stepMs = 100) {
-    return new Promise((resolve) => {
-      const t0 = Date.now();
-      const tick2 = () => {
-        if (cond()) resolve(true);
-        else if (Date.now() - t0 > timeoutMs) resolve(false);
-        else setTimeout(tick2, stepMs);
-      };
-      tick2();
-    });
-  }
   var durationCache = /* @__PURE__ */ new Map();
   var pos = { key: null, offset: 0, lastRel: null, synced: false };
   function shadowRoots(tag) {
@@ -121,10 +96,6 @@
       target.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, composed: true, clientX: 10, clientY: 10 }));
     } catch {
     }
-  }
-  function learned_mode(name) {
-    const l = loadLearned()[name];
-    return l > 5 ? "direkt" : "klick+lernen";
   }
   function seriesName() {
     return (document.title || "").split("|")[0].trim().toLowerCase();
@@ -243,44 +214,26 @@
     },
     findSkipIntro: () => shadowButton("skip-overlay"),
     /**
-     * Intro-Knopf sichtbar. Für Serien mit Logo-Nachlauf (INTRO_EXTRA_SEC):
-     * - kennt das Skript die Sprungweite von Disneys Marker schon (gelernt), springt es
-     *   in einem Zug per Regler an Marker-Ende + Nachlauf, ohne den Knopf zu klicken;
-     * - sonst klickt es den Knopf, misst die Sprungweite, merkt sie sich und zieht den
-     *   Nachlauf einmalig nach.
+     * Intro-Knopf sichtbar. Für Serien mit Logo-Nachlauf (INTRO_PROFILES): bei
+     * Folgenbeginn in einem Zug per Regler um marker + extra springen, ohne den
+     * Knopf zu klicken. Gelingt das nicht (kein Regler lesbar, Folge nicht am
+     * Anfang), wird der Knopf geklickt und der Nachlauf nachgezogen.
      * Gibt false zurück, wenn der Controller normal klicken soll.
      */
     handleSkipIntro: (el, clickOnce) => {
-      const name = seriesName();
-      const extra = INTRO_EXTRA_SEC[name] || 0;
-      if (!extra) return false;
+      const profile = INTRO_PROFILES[seriesName()];
+      if (!profile) return false;
       const key = disney.episodeId();
       if (introHandledKey === key) return "erledigt";
       introHandledKey = key;
       wakeControls(true);
-      setTimeout(async () => {
+      setTimeout(() => {
         const info = sliderInfo();
         const p0 = info && info.now !== null ? info.now : null;
-        const learned = loadLearned()[name];
-        if (p0 !== null && learned > 5 && p0 < FRESH_START_SEC) {
-          seekViaSlider(p0 + learned + extra);
-          return;
-        }
-        if (!clickOnce(el)) return;
-        const moved = await waitFor(() => {
-          wakeControls(true);
-          const i = sliderInfo();
-          return !!(i && i.now !== null && p0 !== null && i.now > p0 + 5);
-        }, 4e3, 150);
-        if (moved && p0 !== null) {
-          const after = sliderInfo();
-          const o = loadLearned();
-          o[name] = Math.round((after.now - p0) * 10) / 10;
-          saveLearned(o);
-        }
-        seekBy(extra);
+        if (p0 !== null && p0 < FRESH_START_SEC && seekViaSlider(p0 + profile.marker + profile.extra)) return;
+        if (clickOnce(el)) setTimeout(() => seekBy(profile.extra), 900);
       }, 350);
-      return learned_mode(name);
+      return "direkt";
     },
     findSkipRecap: () => null,
     findNextEpisode: () => {

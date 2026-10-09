@@ -246,15 +246,16 @@ Nutzerwunsch: Nach dem Intro-Sprung läuft bei Family Guy das Logo etwa 15 s
 weiter; diese sollen mit dem Intro in einem Sprung übersprungen werden, damit
 nur eine Ladepause entsteht. Umsetzung im Disney-Adapter:
 
-- Tabelle `INTRO_EXTRA_SEC` (Serienname aus `document.title` → Sekunden),
-  derzeit `family guy: 15`.
-- Erster Fund des Intro-Knopfs einer solchen Serie: Knopf klicken, am
-  Fortschrittsregler messen, wie weit Disney springt (Family Guy: 13 s), Wert
-  je Serie in `localStorage['schlummer.learned']` speichern, dann Nachlauf per
-  Regler-Sprung anhängen.
-- Ab dann: Erscheint der Knopf bei Folgenbeginn (Position < 20 s), springt das
-  Skript ohne Klick per Zeigerereignis auf den Regler direkt an
-  `Position + gelernte Weite + 15`. Live bestätigt: 1 s → 29 s in einem Schritt.
+- Tabelle `INTRO_PROFILES` (Serienname aus `document.title` → `{ marker, extra }`),
+  derzeit `family guy: { marker: 13, extra: 25 }`. `marker` ist fest
+  eingetragen (Disneys Sprungweite, gemessen 13 s, in jeder Staffel etwa
+  gleich), `extra` der Logo-Nachlauf (Nutzerwunsch vom 2026-10-09: 25 s).
+- Erscheint der Knopf bei Folgenbeginn (Position < 20 s), springt das Skript
+  ohne Klick per Zeigerereignis auf den Regler direkt an
+  `Position + marker + extra`. Mechanik live bestätigt (1 s → 29 s in einem
+  Schritt mit den früheren Werten 13 + 15).
+- Fallback, wenn der Regler nicht lesbar ist oder die Folge nicht am Anfang
+  steht: Knopf klicken, danach `extra` nachziehen.
 - Spulen auf Disney+ nur über den Regler (Zeigerereignisse auf
   `main-app-controls-overlay`), da `currentTime` ignoriert wird; Fallbacks:
   „+10 s"-Taste (abgerundet), dann `currentTime`.
