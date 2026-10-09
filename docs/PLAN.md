@@ -85,3 +85,14 @@ Selektor `interrupt-autoplay-continue` steht im Netflix-UI-Bundle
 `postplay-background-play-trailer`. Nebenwirkung der Tests:
 Die Netflix-Position von Rick and Morty und die Disney+-Position der Simpsons
 (Staffel 9) im Haushaltsprofil wurden durch die Testläufe verschoben.
+
+## Nachtest 2026-10-09, 17:14 bis 17:18 (Disney+, Simpsons S9E14)
+
+- Eine echte Mausbewegung des Nutzers bei 95 % löste „verlaengert via mousemove"
+  (+1 Folge) und damit den Folgenwechsel aus: Verhalten wie spezifiziert.
+- Neustart der Sitzung im Abspann: „done" um 17:16:24, danach zwei Minuten ohne
+  Eingabe stabil (Sitzung aktiv, pausiert, Deckkraft 1, keine URL-Änderung, kein
+  Teardown im Protokoll). Aufwachen um 17:18:38 per Mausbewegung, Lautstärke 1,
+  Video blieb pausiert. Das frühere Selbst-Beenden trat mit dem aktuellen Stand
+  nicht mehr auf; die Schonfrist beim URL-Wechsel und der 3-px-Filter bleiben als
+  Absicherung.
