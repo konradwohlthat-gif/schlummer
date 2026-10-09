@@ -85,9 +85,10 @@ In Chrome mit den Live-Playern getestet (Stand 2026-10-09):
   durch Disney+ im Zustand „Beendet" (neue Folge wird sofort pausiert, Sitzung
   bleibt), Aufwachen mit zurückgesetzter Lautstärke, Autoplay-Sperre. Nicht live gesehen: die
   Inaktivitätsfrage.
-- **Netflix „Schaust du noch?":** Bewusst nicht live getestet (erscheint erst
-  nach Stunden). Der Selektor `interrupt-autoplay-continue` ist im Netflix-
-  UI-Bundle enthalten, ebenso alle anderen verwendeten Selektoren.
+- **Inaktivitätsdialoge:** Nicht live abgewartet (erscheinen erst nach
+  Stunden). Der Netflix-Selektor `interrupt-autoplay-continue` ist im
+  Netflix-UI-Bundle enthalten; der Klickpfad für Netflix und Disney+ ist mit
+  nachgebauten Dialogen im WebKit-Test belegt (`npm run test:webkit:still`).
 - **Safari:** Läuft laut Nutzer am 2026-10-09 auf dem Mac einer Freundin mit
   Userscripts (erste Abnahme). Vollständige Checkliste unten.
 

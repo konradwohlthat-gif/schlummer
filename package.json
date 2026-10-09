@@ -8,7 +8,8 @@
     "build": "node build.mjs",
     "test": "node --test \"test/**/*.test.js\"",
     "check": "npm test && npm run build",
-    "test:webkit": "xcrun swift test/webkit/harness.swift dist/schlummer.user.js"
+    "test:webkit": "xcrun swift test/webkit/harness.swift dist/schlummer.user.js",
+    "test:webkit:still": "sh test/webkit/still-watching.sh"
   },
   "license": "MIT",
   "devDependencies": {

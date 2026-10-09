@@ -156,3 +156,10 @@ Freundin." Damit ist der Safari/Userscripts-Pfad mit dem aktuellen Stand
 bestätigt. Die frühere Meldung vom eigenen Mac (Z ohne Reaktion) fiel in die
 Zeit vor dem Zeitlimit für `GM.getValue` und ist dort noch nicht erneut
 geprüft. Offen auf Wunsch des Nutzers: Netflix „Schaust du noch?" live.
+
+## Inaktivitätsdialoge im WebKit-Harness (2026-10-09, 19:45)
+
+`test/webkit/still-watching.sh`: Tonspur als Video (52 s), Bundle in der
+isolierten Welt, Dialog nachgebaut. Netflix und Disney+: ohne Sitzung 0 Klicks,
+mit Sitzung Klick auf „Weiter", „Schließen" nie geklickt. Live-Beobachtung der
+echten Dialoge bleibt aus (Nutzerwunsch, Dauer).

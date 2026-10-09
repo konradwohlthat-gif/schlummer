@@ -16,3 +16,16 @@ npm run test:webkit -- ok      # GM funktioniert
 Erwartung je Lauf: `panel: true`, nach Z `visible: true`, nach erneutem Z
 `visible: false`. Braucht Xcode Command Line Tools (`xcrun swift`) und eine
 angemeldete Benutzersitzung (es wird kurz ein unsichtbares Fenster erzeugt).
+
+## Inaktivitätsdialoge („Schaust du noch?")
+
+```bash
+npm run test:webkit:still
+```
+
+Erzeugt mit `say`/`afconvert` eine kurze Tonspur als Video (echte Dauer, damit
+der Schlafmodus startet), baut den Netflix-Knopf
+`[data-uia="interrupt-autoplay-continue"]` bzw. das Disney-Element
+`inactivity-overlay` (Shadow DOM mit „Schließen" und „Weiter schauen") nach
+und prüft: ohne Schlafmodus kein Klick, mit Schlafmodus Klick auf „Weiter",
+nie auf „Schließen". Ergebnis 2026-10-09: beide bestanden.
