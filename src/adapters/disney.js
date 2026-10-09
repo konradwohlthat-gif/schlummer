@@ -73,7 +73,7 @@ export const disney = {
   getVideo: () => {
     const vids = [...document.querySelectorAll('video')];
     return (
-      vids.find((v) => v.id === 'hivePlayer1' || v.classList.contains('hive-video')) ||
+      vids.find((v) => /^hivePlayer\d+$/.test(v.id) || v.classList.contains('hive-video')) ||
       vids.find((v) => v.readyState > 0) ||
       vids[0] || null
     );

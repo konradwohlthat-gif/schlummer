@@ -102,7 +102,7 @@
     episodeId: () => (location.pathname.match(/\/(?:video|play)\/([^/?#]+)/) || [])[1] || null,
     getVideo: () => {
       const vids = [...document.querySelectorAll("video")];
-      return vids.find((v) => v.id === "hivePlayer1" || v.classList.contains("hive-video")) || vids.find((v) => v.readyState > 0) || vids[0] || null;
+      return vids.find((v) => /^hivePlayer\d+$/.test(v.id) || v.classList.contains("hive-video")) || vids.find((v) => v.readyState > 0) || vids[0] || null;
     },
     getDuration: (video) => {
       if (video && Number.isFinite(video.duration) && video.duration > 0) return video.duration;
