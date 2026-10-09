@@ -51,3 +51,21 @@ in Chrome, Abnahme in Safari/Userscripts.
   Folgenwechsel neue `<video>`-Elemente an: Wiederherstellung nach dem Ausschalten
   muss einige Sekunden auf neue Elemente nachgezogen werden.
 - Unverifiziert: `[data-uia="interrupt-autoplay-continue"]` („Schaust du noch?").
+
+### Bestätigte Disney+-Struktur (Live-Test 2026-10-09, "hive"-Player)
+
+- Player-URL: `/de-de/play/<uuid>`; Folgenwechsel ändert die UUID.
+- Zwei `<video>`: Platzhalter (readyState 0) und echter Player `#hivePlayerN.hive-video`
+  (N zählt pro Folge hoch). Auswahl über Klasse, sonst readyState > 0.
+- `video.duration` ist Infinity, `video.currentTime` ist nur die Position im
+  Puffer-Fenster (seekable ≈ 60 s). Absolute Position und Dauer stehen im
+  Fortschrittsregler: `main-app-controls-overlay` → Shadow DOM → `[aria-valuemax]`
+  (Sekunden) / `aria-valuenow`. Die Leiste wird nur bei Mausbewegung gerendert
+  und lässt sich per synthetischem `mousemove` auf `pointer-actions` wecken.
+- Direktes Setzen von `currentTime` wird ignoriert (kein Fehler). Spulen im Test
+  per Klick auf den Regler.
+- Intro: `skip-overlay` → Shadow DOM → `button` („Intro überspringen").
+- Abspann: `end-card-overlay` → Shadow DOM → `button.end-card-overlay__content-tile`
+  (Kachel „Als Nächstes"), daneben „Schließen" (nie klicken).
+- Unverifiziert: `inactivity-overlay` (Inaktivitätsfrage), Serienende.
+- Synthetische Ereignisse sind `isTrusted === false` und zählen nicht als Interaktion.

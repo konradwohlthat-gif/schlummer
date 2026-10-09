@@ -216,6 +216,7 @@ export function startController({ adapter, settings, doc = document, win = windo
 
   // ---------- Interaktion ----------
   function onInteraction(e) {
+    if (e.isTrusted === false) return; // synthetische Ereignisse (z. B. Adapter-Weckruf) zählen nicht
     const t = now();
     if (e.type === 'mousedown' || e.type === 'keydown' || e.type === 'wheel' || e.type === 'touchstart') lastUserInputAt = t;
     if (e.type === 'mousemove') {

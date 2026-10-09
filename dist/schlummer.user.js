@@ -861,6 +861,7 @@
       if (sleeping) clickOnce(adapter.findStillWatching());
     }
     function onInteraction(e) {
+      if (e.isTrusted === false) return;
       const t = now();
       if (e.type === "mousedown" || e.type === "keydown" || e.type === "wheel" || e.type === "touchstart") lastUserInputAt = t;
       if (e.type === "mousemove") {
