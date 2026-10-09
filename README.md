@@ -12,10 +12,11 @@ der Mac schläft dann von selbst ein.
 1. **Userscripts installieren.** Lade die kostenlose App
    [Userscripts](https://apps.apple.com/de/app/userscripts/id1463298887) aus
    dem Mac App Store und öffne sie einmal.
-2. **In Safari aktivieren.** Safari → Einstellungen → Erweiterungen →
-   Haken bei „Userscripts". Dann in der Safari-Leiste auf das
-   Userscripts-Symbol klicken und für `netflix.com` und `disneyplus.com`
-   „Immer erlauben" wählen.
+2. **In Safari aktivieren.** Safari → Menü „Safari" → „Einstellungen…" (⌘,)
+   → Reiter „Erweiterungen" → Haken bei „Userscripts". Danach einmal
+   netflix.com öffnen, in der Safari-Leiste auf das Userscripts-Symbol
+   klicken und „Immer auf dieser Website erlauben" wählen. Dasselbe einmal
+   auf disneyplus.com.
 3. **Schlummer installieren.** Öffne diesen Link in Safari:
 
    **https://raw.githubusercontent.com/konradwohlthat-gif/schlummer/main/dist/schlummer.user.js**
@@ -121,6 +122,29 @@ npm run build   # erzeugt dist/schlummer.user.js
 Zum Ausprobieren in Chrome oder Firefox: den Inhalt von
 `dist/schlummer.user.js` in Tampermonkey/Violentmonkey als neues Skript
 einfügen.
+
+### Safari per AppleScript prüfen (nur für Entwickler)
+
+Damit sich Safari aus dem Terminal abfragen lässt (zum Beispiel ob das
+Panel in der Seite liegt), braucht es zwei Einstellungen, die Nutzer
+nicht benötigen:
+
+1. Safari → „Safari" → „Einstellungen…" (⌘,) → Reiter „Erweitert" → ganz
+   unten „Funktionen für Webentwickler anzeigen" einschalten.
+2. Im neuen Menü „Entwickler" den Punkt „JavaScript aus Apple Events
+   erlauben" anhaken. Safari fragt einmal nach Bestätigung.
+3. Beim ersten Aufruf fragt macOS, ob das Terminal Safari steuern darf:
+   „Erlauben".
+
+Prüfung, ob das Skript in Safari läuft (Netflix-Folge in Safari offen):
+
+```bash
+osascript -e 'tell application "Safari" to do JavaScript "document.querySelectorAll(\".schlummer-panel\").length" in front document'
+```
+
+Ergebnis `1` heißt: Userscripts hat Schlummer in die Seite geladen.
+Ohne diese Einstellungen antwortet Safari mit dem Fehler „You must enable
+'Allow JavaScript from Apple Events'".
 
 ## Lizenz
 
