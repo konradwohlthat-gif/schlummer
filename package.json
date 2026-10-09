@@ -1,0 +1,16 @@
+{
+  "name": "schlummer",
+  "version": "1.0.0",
+  "description": "Einschlafhilfe für Netflix und Disney+ als Safari-Userscript",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test \"test/**/*.test.js\"",
+    "check": "npm test && npm run build"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.25.2"
+  }
+}

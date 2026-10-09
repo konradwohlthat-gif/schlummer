@@ -1,0 +1,18 @@
+// ==UserScript==
+// @name         Schlummer
+// @namespace    https://github.com/konradwohlthat-gif/schlummer
+// @version      {{VERSION}}
+// @description  Einschlafhilfe für Netflix und Disney+: Bild und Ton werden über eine einstellbare Anzahl Folgen langsam ausgeblendet, Intro und Abspann werden übersprungen.
+// @author       Konrad Wohlthat
+// @license      MIT
+// @match        https://www.netflix.com/*
+// @match        https://www.disneyplus.com/*
+// @grant        GM.getValue
+// @grant        GM.setValue
+// @run-at       document-idle
+// @noframes
+// @homepageURL  https://github.com/konradwohlthat-gif/schlummer
+// @supportURL   https://github.com/konradwohlthat-gif/schlummer/issues
+// @updateURL    https://raw.githubusercontent.com/konradwohlthat-gif/schlummer/main/dist/schlummer.user.js
+// @downloadURL  https://raw.githubusercontent.com/konradwohlthat-gif/schlummer/main/dist/schlummer.user.js
+// ==/UserScript==
