@@ -8,7 +8,8 @@ const POLL_MS = 250;
 const INTERACT_COOLDOWN_MS = 10000; // nach einer Verlängerung
 const WAKE_GRACE_MS = 2000;         // nach dem Ende: so lange keine Aufwach-Erkennung
 const WAKE_MOVE_PX = 12;            // Mindest-Mausbewegung zum Aufwachen
-const MOVE_MIN_PX = 3;              // kleinere "Bewegungen" sind Browser-Artefakte (Layoutwechsel unter dem Zeiger)
+const MOVE_MIN_PX = 3;
+const OFFPAGE_GRACE_MS = 6000;      // SPA-Übergänge zwischen Folgen verlassen kurz die Player-URL              // kleinere "Bewegungen" sind Browser-Artefakte (Layoutwechsel unter dem Zeiger)
 const USER_VOLUME_WINDOW_MS = 1500; // Lautstärkeänderung kurz nach Eingabe = Nutzer
 const CLICK_REPEAT_MS = 1500;
 const RESTORE_MS = 6000;            // nach dem Ausschalten: Lautstärke auf neue Video-Elemente nachziehen
@@ -39,6 +40,12 @@ export function startController({ adapter, settings, doc = document, win = windo
   let nextClickedKey = null;  // Sicherung: "Nächste Folge" höchstens einmal pro Folge
   let restore = null;         // { until, base } nach dem Ausschalten
   let holdPauseUntil = 0;     // nach dem Aufwachen: Netflix-Autoplay zurückhalten
+  let offPageSince = 0;       // seit wann keine Player-URL mehr (Schonfrist)
+  const log = [];             // kleines Ereignisprotokoll für die Fehlersuche
+  function note(reason, extra) {
+    log.push({ t: new Date().toISOString().slice(11, 19), reason, path: location.pathname, ...(extra || {}) });
+    if (log.length > 60) log.shift();
+  }
   const clickedAt = new WeakMap();
 
   // ---------- Hilfen ----------
@@ -109,10 +116,11 @@ export function startController({ adapter, settings, doc = document, win = windo
     panel.update();
   }
 
-  function exitSleep() {
+  function exitSleep(reason = 'unbekannt') {
     if (!session) return;
     const base = session.base;
     const wasDone = session.done;
+    note('exit', { reason, wasDone });
     session = null;
     // Nach dem Ende hält nur unser Pausieren Netflix' Autoplay zurück. Nach dem
     // Aufwachen soll nichts von selbst loslaufen, bis der Nutzer bewusst startet.
@@ -135,13 +143,14 @@ export function startController({ adapter, settings, doc = document, win = windo
   }
 
   function toggleSleep() {
-    if (session) exitSleep();
+    if (session) exitSleep('schalter');
     else startSleep();
   }
 
   function enterDone() {
     doneAt = now();
     doneMoved = 0;
+    note('done');
     if (video) {
       try { video.pause(); } catch { /* ignorieren */ }
     }
@@ -169,7 +178,7 @@ export function startController({ adapter, settings, doc = document, win = windo
   // ---------- Video / Folgenwechsel ----------
   function onVideoChange(v, key) {
     if (session && !session.done && lastStats && key !== episodeKey) {
-      if (!pendingSwitch) pendingSwitch = { prev: { ...lastStats }, oldVideo: video, at: now() };
+      if (!pendingSwitch) { pendingSwitch = { prev: { ...lastStats }, oldVideo: video, at: now() }; note('folgenwechsel', { from: episodeKey, to: key }); }
     }
     if (v !== video) {
       video = v;
@@ -239,7 +248,7 @@ export function startController({ adapter, settings, doc = document, win = windo
     if (!session) return;
     if (panel.isInside(e.target)) return;
     if (session.done) {
-      if (t - doneAt > WAKE_GRACE_MS && (e.type !== 'mousemove' || doneMoved > WAKE_MOVE_PX)) exitSleep();
+      if (t - doneAt > WAKE_GRACE_MS && (e.type !== 'mousemove' || doneMoved > WAKE_MOVE_PX)) exitSleep('aufwachen:' + e.type);
       return;
     }
     if (t - lastExtendAt < INTERACT_COOLDOWN_MS) return;
@@ -247,6 +256,7 @@ export function startController({ adapter, settings, doc = document, win = windo
       const r = session.interact(stats(video));
       if (r.changed) {
         lastExtendAt = t;
+        note('verlaengert', { added: r.added, via: e.type });
         if (r.added > 0) panel.notice(r.added === 1 ? '+1 Folge nachgelegt' : `+${r.added} Folgen nachgelegt`);
         applyOutputs();
         panel.update();
@@ -299,7 +309,8 @@ export function startController({ adapter, settings, doc = document, win = windo
   }
 
   function teardownPage() {
-    if (session) exitSleep();
+    note('teardown');
+    if (session) exitSleep('seite verlassen');
     panel.unmount();
     overlay.unmount();
     if (video) video.removeEventListener('ended', onEnded);
@@ -321,9 +332,13 @@ export function startController({ adapter, settings, doc = document, win = windo
 
   function step() {
     if (!adapter.isPlayerPage()) {
-      if (mounted) teardownPage();
+      if (mounted) {
+        if (session && !offPageSince) { offPageSince = now(); note('player-url verlassen'); }
+        if (!session || now() - offPageSince > OFFPAGE_GRACE_MS) teardownPage();
+      }
       return;
     }
+    offPageSince = 0;
     if (!mounted) mountPage();
     const root = adapter.fullscreenRoot();
     overlay.mount(root);
@@ -347,6 +362,7 @@ export function startController({ adapter, settings, doc = document, win = windo
       if (!pendingSwitch) lastStats = stats(video);
     }
     if (session && !session.done && adapter.isSeriesEnd && adapter.isSeriesEnd()) {
+      note('serienende');
       session.finish();
       pendingSwitch = null;
       panel.notice('Serie zu Ende');
@@ -382,6 +398,7 @@ export function startController({ adapter, settings, doc = document, win = windo
     // für Tests / Entwicklung
     get session() { return session; },
     get video() { return video; },
+    get log() { return log; },
     settings,
     toggleSleep,
   };

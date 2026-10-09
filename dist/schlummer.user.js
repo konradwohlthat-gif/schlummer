@@ -665,6 +665,7 @@
   var WAKE_GRACE_MS = 2e3;
   var WAKE_MOVE_PX = 12;
   var MOVE_MIN_PX = 3;
+  var OFFPAGE_GRACE_MS = 6e3;
   var USER_VOLUME_WINDOW_MS = 1500;
   var CLICK_REPEAT_MS = 1500;
   var RESTORE_MS = 6e3;
@@ -692,6 +693,12 @@
     let nextClickedKey = null;
     let restore = null;
     let holdPauseUntil = 0;
+    let offPageSince = 0;
+    const log = [];
+    function note(reason, extra) {
+      log.push({ t: (/* @__PURE__ */ new Date()).toISOString().slice(11, 19), reason, path: location.pathname, ...extra || {} });
+      if (log.length > 60) log.shift();
+    }
     const clickedAt = /* @__PURE__ */ new WeakMap();
     const durationOf = (v) => adapter.getDuration ? adapter.getDuration(v) : v.duration;
     const positionOf = (v) => adapter.getPosition ? adapter.getPosition(v) : v.currentTime || 0;
@@ -762,10 +769,11 @@
       applyOutputs();
       panel.update();
     }
-    function exitSleep() {
+    function exitSleep(reason = "unbekannt") {
       if (!session) return;
       const base = session.base;
       const wasDone = session.done;
+      note("exit", { reason, wasDone });
       session = null;
       holdPauseUntil = wasDone ? now() + HOLD_PAUSE_MS : 0;
       overlay.setDim(0);
@@ -785,12 +793,13 @@
       if (Math.abs(v.volume - restore.base) > 0.01) v.volume = restore.base;
     }
     function toggleSleep() {
-      if (session) exitSleep();
+      if (session) exitSleep("schalter");
       else startSleep();
     }
     function enterDone() {
       doneAt = now();
       doneMoved = 0;
+      note("done");
       if (video) {
         try {
           video.pause();
@@ -821,7 +830,10 @@
     }
     function onVideoChange(v, key) {
       if (session && !session.done && lastStats && key !== episodeKey) {
-        if (!pendingSwitch) pendingSwitch = { prev: { ...lastStats }, oldVideo: video, at: now() };
+        if (!pendingSwitch) {
+          pendingSwitch = { prev: { ...lastStats }, oldVideo: video, at: now() };
+          note("folgenwechsel", { from: episodeKey, to: key });
+        }
       }
       if (v !== video) {
         video = v;
@@ -883,7 +895,7 @@
       if (!session) return;
       if (panel.isInside(e.target)) return;
       if (session.done) {
-        if (t - doneAt > WAKE_GRACE_MS && (e.type !== "mousemove" || doneMoved > WAKE_MOVE_PX)) exitSleep();
+        if (t - doneAt > WAKE_GRACE_MS && (e.type !== "mousemove" || doneMoved > WAKE_MOVE_PX)) exitSleep("aufwachen:" + e.type);
         return;
       }
       if (t - lastExtendAt < INTERACT_COOLDOWN_MS) return;
@@ -891,6 +903,7 @@
         const r = session.interact(stats(video));
         if (r.changed) {
           lastExtendAt = t;
+          note("verlaengert", { added: r.added, via: e.type });
           if (r.added > 0) panel.notice(r.added === 1 ? "+1 Folge nachgelegt" : `+${r.added} Folgen nachgelegt`);
           applyOutputs();
           panel.update();
@@ -943,7 +956,8 @@
       mounted = true;
     }
     function teardownPage() {
-      if (session) exitSleep();
+      note("teardown");
+      if (session) exitSleep("seite verlassen");
       panel.unmount();
       overlay.unmount();
       if (video) video.removeEventListener("ended", onEnded);
@@ -963,9 +977,16 @@
     }
     function step() {
       if (!adapter.isPlayerPage()) {
-        if (mounted) teardownPage();
+        if (mounted) {
+          if (session && !offPageSince) {
+            offPageSince = now();
+            note("player-url verlassen");
+          }
+          if (!session || now() - offPageSince > OFFPAGE_GRACE_MS) teardownPage();
+        }
         return;
       }
+      offPageSince = 0;
       if (!mounted) mountPage();
       const root = adapter.fullscreenRoot();
       overlay.mount(root);
@@ -987,6 +1008,7 @@
         if (!pendingSwitch) lastStats = stats(video);
       }
       if (session && !session.done && adapter.isSeriesEnd && adapter.isSeriesEnd()) {
+        note("serienende");
         session.finish();
         pendingSwitch = null;
         panel.notice("Serie zu Ende");
@@ -1028,6 +1050,9 @@
       },
       get video() {
         return video;
+      },
+      get log() {
+        return log;
       },
       settings,
       toggleSleep
