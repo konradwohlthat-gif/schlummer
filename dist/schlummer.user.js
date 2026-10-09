@@ -589,7 +589,6 @@
     let doneAt = 0;
     let doneMoved = 0;
     let lastMouse = null;
-    let weMuted = false;
     let mounted = false;
     let stopped = false;
     let nextClickedKey = null;
@@ -648,7 +647,6 @@
       }
       session = createSession({ settings, video, baseVolume: video.volume });
       lastExtendAt = 0;
-      weMuted = false;
       endedFlag = !!video.ended;
       applyOutputs();
       panel.update();
@@ -659,8 +657,7 @@
       session = null;
       overlay.setDim(0);
       overlay.setWarm(0);
-      restore = { until: now() + RESTORE_MS, base, unmute: weMuted };
-      weMuted = false;
+      restore = { until: now() + RESTORE_MS, base };
       applyRestore();
       panel.update();
     }
@@ -672,7 +669,6 @@
       }
       const v = adapter.getVideo();
       if (!v) return;
-      if (restore.unmute && v.muted) v.muted = false;
       if (Math.abs(v.volume - restore.base) > 0.01) v.volume = restore.base;
     }
     function toggleSleep() {
@@ -683,10 +679,6 @@
       doneAt = now();
       doneMoved = 0;
       if (video) {
-        if (!video.muted) {
-          video.muted = true;
-          weMuted = true;
-        }
         try {
           video.pause();
         } catch {
@@ -708,10 +700,7 @@
           } catch {
           }
         }
-        if (!video.muted) {
-          video.muted = true;
-          weMuted = true;
-        }
+        if (!video.muted) setVolume(video, session.volume(vs, settings));
         return;
       }
       doneAt = 0;

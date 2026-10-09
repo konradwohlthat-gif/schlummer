@@ -31,7 +31,6 @@ export function startController({ adapter, settings, doc = document, win = windo
   let doneAt = 0;
   let doneMoved = 0;
   let lastMouse = null;
-  let weMuted = false;
   let mounted = false;
   let stopped = false;
   let nextClickedKey = null;  // Sicherung: "Nächste Folge" höchstens einmal pro Folge
@@ -97,7 +96,6 @@ export function startController({ adapter, settings, doc = document, win = windo
     }
     session = createSession({ settings, video, baseVolume: video.volume });
     lastExtendAt = 0;
-    weMuted = false;
     endedFlag = !!video.ended;
     applyOutputs();
     panel.update();
@@ -109,10 +107,9 @@ export function startController({ adapter, settings, doc = document, win = windo
     session = null;
     overlay.setDim(0);
     overlay.setWarm(0);
-    // Netflix übernimmt unsere Stummschaltung in seinen eigenen Zustand und legt
-    // beim Folgenwechsel neue Video-Elemente an. Deshalb eine Weile nachziehen.
-    restore = { until: now() + RESTORE_MS, base, unmute: weMuted };
-    weMuted = false;
+    // Netflix legt beim Folgenwechsel neue Video-Elemente an und übernimmt die
+    // Lautstärke in seinen eigenen Zustand. Deshalb eine Weile nachziehen.
+    restore = { until: now() + RESTORE_MS, base };
     applyRestore();
     panel.update();
   }
@@ -122,7 +119,6 @@ export function startController({ adapter, settings, doc = document, win = windo
     if (now() > restore.until) { restore = null; return; }
     const v = adapter.getVideo();
     if (!v) return;
-    if (restore.unmute && v.muted) v.muted = false;
     if (Math.abs(v.volume - restore.base) > 0.01) v.volume = restore.base;
   }
 
@@ -135,7 +131,6 @@ export function startController({ adapter, settings, doc = document, win = windo
     doneAt = now();
     doneMoved = 0;
     if (video) {
-      if (!video.muted) { video.muted = true; weMuted = true; }
       try { video.pause(); } catch { /* ignorieren */ }
     }
     panel.update();
@@ -148,9 +143,11 @@ export function startController({ adapter, settings, doc = document, win = windo
     overlay.setDim(p);
     overlay.setWarm(settings.blueLight);
     if (session.done) {
+      // Nie `muted` setzen: Netflix merkt sich das in seinem eigenen Zustand und
+      // bleibt dann auch nach dem Aufwachen stumm. Lautstärke reicht, da pausiert.
       if (!doneAt) enterDone();
       if (!video.paused) { try { video.pause(); } catch { /* ignorieren */ } }
-      if (!video.muted) { video.muted = true; weMuted = true; }
+      if (!video.muted) setVolume(video, session.volume(vs, settings));
       return;
     }
     doneAt = 0;
