@@ -10,6 +10,7 @@ const WAKE_GRACE_MS = 2000;         // nach dem Ende: so lange keine Aufwach-Erk
 const WAKE_MOVE_PX = 12;            // Mindest-Mausbewegung zum Aufwachen
 const USER_VOLUME_WINDOW_MS = 1500; // Lautstärkeänderung kurz nach Eingabe = Nutzer
 const CLICK_REPEAT_MS = 1500;
+const RESTORE_MS = 6000;            // nach dem Ausschalten: Lautstärke auf neue Video-Elemente nachziehen
 const SWITCH_TIMEOUT_MS = 4000;     // Folgenwechsel spätestens dann verarbeiten
 
 const now = () => Date.now();
@@ -34,6 +35,7 @@ export function startController({ adapter, settings, doc = document, win = windo
   let mounted = false;
   let stopped = false;
   let nextClickedKey = null;  // Sicherung: "Nächste Folge" höchstens einmal pro Folge
+  let restore = null;         // { until, base, unmute } nach dem Ausschalten
   const clickedAt = new WeakMap();
 
   // ---------- Hilfen ----------
@@ -107,12 +109,21 @@ export function startController({ adapter, settings, doc = document, win = windo
     session = null;
     overlay.setDim(0);
     overlay.setWarm(0);
-    if (video) {
-      if (weMuted) video.muted = false;
-      setVolume(video, base);
-    }
+    // Netflix übernimmt unsere Stummschaltung in seinen eigenen Zustand und legt
+    // beim Folgenwechsel neue Video-Elemente an. Deshalb eine Weile nachziehen.
+    restore = { until: now() + RESTORE_MS, base, unmute: weMuted };
     weMuted = false;
+    applyRestore();
     panel.update();
+  }
+
+  function applyRestore() {
+    if (!restore) return;
+    if (now() > restore.until) { restore = null; return; }
+    const v = adapter.getVideo();
+    if (!v) return;
+    if (restore.unmute && v.muted) v.muted = false;
+    if (Math.abs(v.volume - restore.base) > 0.01) v.volume = restore.base;
   }
 
   function toggleSleep() {
@@ -319,6 +330,7 @@ export function startController({ adapter, settings, doc = document, win = windo
       panel.notice('Serie zu Ende');
     }
     if (session) applyOutputs();
+    else applyRestore();
     runSkips();
     panel.update();
   }

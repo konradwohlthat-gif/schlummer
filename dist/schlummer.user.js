@@ -571,6 +571,7 @@
   var WAKE_MOVE_PX = 12;
   var USER_VOLUME_WINDOW_MS = 1500;
   var CLICK_REPEAT_MS = 1500;
+  var RESTORE_MS = 6e3;
   var SWITCH_TIMEOUT_MS = 4e3;
   var now = () => Date.now();
   function startController({ adapter, settings, doc = document, win = window }) {
@@ -592,6 +593,7 @@
     let mounted = false;
     let stopped = false;
     let nextClickedKey = null;
+    let restore = null;
     const clickedAt = /* @__PURE__ */ new WeakMap();
     const hasMeta = (v) => !!v && Number.isFinite(v.duration) && v.duration > 0;
     const stats = (v) => ({ duration: hasMeta(v) ? v.duration : 0, currentTime: v.currentTime || 0, ended: !!(v.ended || endedFlag) });
@@ -657,12 +659,21 @@
       session = null;
       overlay.setDim(0);
       overlay.setWarm(0);
-      if (video) {
-        if (weMuted) video.muted = false;
-        setVolume(video, base);
-      }
+      restore = { until: now() + RESTORE_MS, base, unmute: weMuted };
       weMuted = false;
+      applyRestore();
       panel.update();
+    }
+    function applyRestore() {
+      if (!restore) return;
+      if (now() > restore.until) {
+        restore = null;
+        return;
+      }
+      const v = adapter.getVideo();
+      if (!v) return;
+      if (restore.unmute && v.muted) v.muted = false;
+      if (Math.abs(v.volume - restore.base) > 0.01) v.volume = restore.base;
     }
     function toggleSleep() {
       if (session) exitSleep();
@@ -863,6 +874,7 @@
         panel.notice("Serie zu Ende");
       }
       if (session) applyOutputs();
+      else applyRestore();
       runSkips();
       panel.update();
     }

@@ -39,3 +39,15 @@ in Chrome, Abnahme in Safari/Userscripts.
   neues an. Der Controller behandelt das als dasselbe Video (URL unverändert).
 - Entwicklung: minifiziertes Bundle einmal in `localStorage['schlummer.dev']`
   ablegen, nach Reload mit `eval(localStorage.getItem('schlummer.dev'))` laden.
+
+### Bestätigte Netflix-Selektoren (Live-Test 2026-10-09)
+
+- Intro: `[data-uia="player-skip-intro"]` (erscheint z. B. bei 2:10, Klick springt 28 s)
+- Abspann: `[data-uia="next-episode-seamless-button"]` neben `watch-credits-seamless-button`,
+  erscheint ca. 24 s vor Ende
+- Serienende: `[data-uia="postplay-background-play-trailer"]`, `postplay-back-to-browse`
+- Niemals klicken: `[data-uia="control-next"]` (Weiter-Knopf der Steuerleiste, gleicher Text)
+- Netflix übernimmt `video.muted`/`video.volume` in seinen Zustand und legt beim
+  Folgenwechsel neue `<video>`-Elemente an: Wiederherstellung nach dem Ausschalten
+  muss einige Sekunden auf neue Elemente nachgezogen werden.
+- Unverifiziert: `[data-uia="interrupt-autoplay-continue"]` („Schaust du noch?").
