@@ -148,3 +148,11 @@ Skript-Welt mit einer WKWebView nachgestellt (`test/webkit/harness.swift`):
   Fallback; im Harness bestanden für hängendes, fehlschlagendes und
   funktionierendes GM.
 - Offen bleibt nur die Bestätigung im echten Safari (Nutzer).
+
+## Safari-Bestätigung (2026-10-09, Abend)
+
+Nutzer: „Für das erste Stopp läuft das Skript gut auf dem Computer einer
+Freundin." Damit ist der Safari/Userscripts-Pfad mit dem aktuellen Stand
+bestätigt. Die frühere Meldung vom eigenen Mac (Z ohne Reaktion) fiel in die
+Zeit vor dem Zeitlimit für `GM.getValue` und ist dort noch nicht erneut
+geprüft. Offen auf Wunsch des Nutzers: Netflix „Schaust du noch?" live.

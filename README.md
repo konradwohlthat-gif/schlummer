@@ -88,7 +88,8 @@ In Chrome mit den Live-Playern getestet (Stand 2026-10-09):
 - **Netflix „Schaust du noch?":** Bewusst nicht live getestet (erscheint erst
   nach Stunden). Der Selektor `interrupt-autoplay-continue` ist im Netflix-
   UI-Bundle enthalten, ebenso alle anderen verwendeten Selektoren.
-- **Safari selbst:** Abnahme durch dich, Checkliste unten.
+- **Safari:** Läuft laut Nutzer am 2026-10-09 auf dem Mac einer Freundin mit
+  Userscripts (erste Abnahme). Vollständige Checkliste unten.
 
 ## Abnahme in Safari (Checkliste)
 
