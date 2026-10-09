@@ -50,6 +50,9 @@
   // src/adapters/disney.js
   var WAKE_EVERY_MS = 4e3;
   var lastWake = 0;
+  var INTRO_EXTRA_SEC = { "family guy": 15 };
+  var INTRO_EXTRA_DELAY_MS = 900;
+  var SEEK_VERIFY_MS = 1200;
   var durationCache = /* @__PURE__ */ new Map();
   var pos = { key: null, offset: 0, lastRel: null, synced: false };
   function shadowRoots(tag) {
@@ -83,15 +86,89 @@
     }
     return null;
   }
-  function wakeControls() {
+  function wakeControls(force = false) {
     const t = Date.now();
-    if (t - lastWake < WAKE_EVERY_MS) return;
+    if (!force && t - lastWake < WAKE_EVERY_MS) return;
     lastWake = t;
     const target = document.querySelector("pointer-actions") || document.querySelector("disney-web-player-ui") || document.body;
     try {
       target.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, composed: true, clientX: 10, clientY: 10 }));
     } catch {
     }
+  }
+  function seriesName() {
+    return (document.title || "").split("|")[0].trim().toLowerCase();
+  }
+  function sliderInfo() {
+    for (const r of shadowRoots("main-app-controls-overlay")) {
+      const s = r.querySelector("[aria-valuemax]");
+      if (!s) continue;
+      const max = Number(s.getAttribute("aria-valuemax"));
+      const now2 = Number(s.getAttribute("aria-valuenow"));
+      if (Number.isFinite(max) && max > 60) return { el: s, root: r, max, now: Number.isFinite(now2) ? now2 : null };
+    }
+    return null;
+  }
+  function seekViaSlider(targetSec) {
+    const info = sliderInfo();
+    if (!info) return false;
+    const rect = info.el.getBoundingClientRect();
+    if (rect.width < 50) return false;
+    const x = rect.left + rect.width * Math.min(1, Math.max(0, targetSec / info.max));
+    const y = rect.top + rect.height / 2;
+    const target = info.root.elementFromPoint && info.root.elementFromPoint(x, y) || info.el;
+    const base = { bubbles: true, composed: true, cancelable: true, clientX: x, clientY: y, button: 0, pointerId: 1, pointerType: "mouse", isPrimary: true };
+    try {
+      target.dispatchEvent(new PointerEvent("pointerdown", { ...base, buttons: 1 }));
+      target.dispatchEvent(new MouseEvent("mousedown", { ...base, buttons: 1 }));
+      target.dispatchEvent(new PointerEvent("pointerup", { ...base, buttons: 0 }));
+      target.dispatchEvent(new MouseEvent("mouseup", { ...base, buttons: 0 }));
+      target.dispatchEvent(new MouseEvent("click", { ...base, buttons: 0 }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function seekViaForwardButton(seconds) {
+    const clicks = Math.floor(seconds / 10);
+    if (clicks < 1) return false;
+    for (const r of shadowRoots("main-app-controls-overlay")) {
+      for (const b of r.querySelectorAll("button")) {
+        const label = ((b.getAttribute("aria-label") || "") + " " + String(b.className)).toLowerCase();
+        if (/10/.test(label) && /(vor|forward|skip-forward|next)/.test(label) && visible(b)) {
+          for (let i = 0; i < clicks; i += 1) b.click();
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  function seekBy(seconds) {
+    wakeControls(true);
+    setTimeout(() => {
+      const before = sliderInfo();
+      const start = before && before.now !== null ? before.now : null;
+      const check = (next) => setTimeout(() => {
+        const after = sliderInfo();
+        const moved = start !== null && after && after.now !== null && after.now - start >= seconds - 3;
+        if (!moved && next) next();
+      }, SEEK_VERIFY_MS);
+      const tryCurrentTime = () => {
+        const v = disney.getVideo();
+        if (v) {
+          try {
+            v.currentTime = v.currentTime + seconds;
+          } catch {
+          }
+        }
+      };
+      const tryButton = () => {
+        if (!seekViaForwardButton(seconds)) tryCurrentTime();
+        else check(tryCurrentTime);
+      };
+      if (start !== null && seekViaSlider(start + seconds)) check(tryButton);
+      else tryButton();
+    }, 350);
   }
   var disney = {
     id: "disney",
@@ -135,6 +212,12 @@
       return Math.max(0, rel + pos.offset);
     },
     findSkipIntro: () => shadowButton("skip-overlay"),
+    /** Nach dem Intro-Klick: bei bekannten Serien zusätzlich vorspulen (Logo läuft weiter). */
+    afterIntroSkip: () => {
+      const extra = INTRO_EXTRA_SEC[seriesName()] || 0;
+      if (extra > 0) setTimeout(() => seekBy(extra), INTRO_EXTRA_DELAY_MS);
+      return extra;
+    },
     findSkipRecap: () => null,
     findNextEpisode: () => {
       for (const r of shadowRoots("end-card-overlay")) {
@@ -873,7 +956,10 @@
     }
     function runSkips() {
       if (settings.skipIntro) {
-        clickOnce(adapter.findSkipIntro());
+        if (clickOnce(adapter.findSkipIntro()) && adapter.afterIntroSkip) {
+          const extra = adapter.afterIntroSkip();
+          if (extra) note("intro-nachlauf", { extra });
+        }
         clickOnce(adapter.findSkipRecap());
       }
       const sleeping = !!session && !session.done;

@@ -214,7 +214,10 @@ export function startController({ adapter, settings, doc = document, win = windo
   // ---------- Skips ----------
   function runSkips() {
     if (settings.skipIntro) {
-      clickOnce(adapter.findSkipIntro());
+      if (clickOnce(adapter.findSkipIntro()) && adapter.afterIntroSkip) {
+        const extra = adapter.afterIntroSkip();
+        if (extra) note('intro-nachlauf', { extra });
+      }
       clickOnce(adapter.findSkipRecap());
     }
     const sleeping = !!session && !session.done;
