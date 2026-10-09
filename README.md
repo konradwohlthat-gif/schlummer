@@ -127,6 +127,23 @@ npm test        # Modelltests
 npm run build   # erzeugt dist/schlummer.user.js
 ```
 
+### Update veröffentlichen
+
+1. Version anheben, sonst sieht Userscripts kein Update:
+   `npm version 1.2.0 --no-git-tag-version`
+2. `npm run build`, dann `git add -A && git commit -m "…" && git push`
+3. Fertig. Die Raw-URL auf GitHub zeigt den neuen Stand nach wenigen Minuten.
+
+Bei Freunden holt Userscripts die neue Version selbst: In Safari auf das
+Userscripts-Symbol klicken und im Popup auf das Aktualisieren-Symbol
+(„Nach Updates suchen"), oder in der Userscripts-App links „Updates".
+Für den eigenen Mac reicht es, die neue `dist/schlummer.user.js` in den
+Userscripts-Ordner zu kopieren:
+
+```bash
+cp dist/schlummer.user.js ~/Library/Containers/com.userscripts.macos.Userscripts-Extension/Data/Documents/scripts/
+```
+
 - `src/model.js` enthält das Zeit- und Lautstärkemodell als reine Funktionen.
 - `src/adapters/` enthält pro Anbieter die Selektoren für Video, Intro,
   Abspann und Folgenwechsel. Ein neuer Anbieter ist eine neue Datei dort.

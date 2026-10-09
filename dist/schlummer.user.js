@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Schlummer
 // @namespace    https://github.com/konradwohlthat-gif/schlummer
-// @version      1.0.0
+// @version      1.1.0
 // @description  Einschlafhilfe für Netflix und Disney+: Bild und Ton werden über eine einstellbare Anzahl Folgen langsam ausgeblendet, Intro und Abspann werden übersprungen.
 // @author       Konrad Wohlthat
 // @license      MIT
