@@ -68,6 +68,39 @@ Schlummer-Panel. Z schließt es wieder, ebenso ein Klick daneben.
 
 „Standardwerte" setzt alles zurück.
 
+## Was auf den echten Seiten geprüft wurde
+
+In Chrome mit den Live-Playern getestet (Stand 2026-10-09):
+
+- **Netflix:** Panel, Dimmen, Lautstärkekurve, Verlängerung bei Interaktion,
+  Intro überspringen, Abspann überspringen, Folgenwechsel mit Zählung, Ende
+  (pausiert, Lautstärke 0, schwarz), Aufwachen mit zurückgesetzter
+  Lautstärke, Autoplay-Sperre bis zum bewussten Play, Serienende,
+  Startverzögerung, Mindestlautstärke, Blaulichtfilter, Standardwerte.
+- **Disney+:** Panel, Dimmen, Positionsverfolgung, Abspann überspringen,
+  Folgenwechsel mit Zählung, Ende, Aufwachen. Nicht live gesehen: der Klick
+  auf „Intro überspringen" (Selektor aus dem DOM übernommen) und die
+  Inaktivitätsfrage.
+- **Noch nicht geprüft:** Netflix „Schaust du noch?" (Selektor aus Erfahrung),
+  Safari selbst.
+
+## Abnahme in Safari (Checkliste)
+
+1. Skript installiert, Userscripts für netflix.com und disneyplus.com erlaubt.
+2. Folge starten, **Z** drücken: Panel erscheint oben rechts, Z schließt es.
+3. Vollbild (F bzw. Knopf): Panel und Dimmen liegen über dem Bild.
+4. Schlafmodus mit 2 Folgen einschalten: Status zeigt „Folge 1 von 2 · 0 %".
+5. Nach einigen Minuten: Bild dunkler, Ton leiser, Status steigt.
+6. Intro einer Folge: wird übersprungen.
+7. Abspann: springt zur nächsten Folge, Status „Folge 2 von 2".
+8. Maus bewegen, wenn über 40 % gedimmt: Einblendung „+1 Folge nachgelegt".
+9. Ende der letzten Folge: schwarz, still, pausiert. Mac geht später von selbst aus.
+10. Maus bewegen: Bild zurück, Lautstärke zurück, Video bleibt pausiert, erst
+    Leertaste startet.
+11. Unter „Mehr": Blaulichtfilter sichtbar wärmer, Mindestlautstärke und
+    Startverzögerung wirken, „Standardwerte" setzt zurück.
+12. Safari schließen und neu öffnen: Einstellungen sind noch da.
+
 ## Entwicklung
 
 ```bash

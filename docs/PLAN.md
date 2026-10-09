@@ -69,3 +69,12 @@ in Chrome, Abnahme in Safari/Userscripts.
   (Kachel „Als Nächstes"), daneben „Schließen" (nie klicken).
 - Unverifiziert: `inactivity-overlay` (Inaktivitätsfrage), Serienende.
 - Synthetische Ereignisse sind `isTrusted === false` und zählen nicht als Interaktion.
+
+## Stand 2026-10-09 (Ende der ersten Bau- und Testrunde)
+
+Alle Funktionen des Spec inklusive der vier Zusatzfunktionen sind gebaut und
+auf Netflix live geprüft; Disney+ bis auf Intro-Klick und Inaktivitätsfrage.
+Offen: Abnahme in Safari/Userscripts durch den Nutzer (Checkliste im README),
+Netflix „Schaust du noch?" und Disney+-Intro live sehen. Nebenwirkung der Tests:
+Die Netflix-Position von Rick and Morty und die Disney+-Position der Simpsons
+(Staffel 9) im Haushaltsprofil wurden durch die Testläufe verschoben.
