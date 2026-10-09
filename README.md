@@ -81,8 +81,9 @@ In Chrome mit den Live-Playern getestet (Stand 2026-10-09):
 - **Disney+:** Panel, Dimmen, Positionsverfolgung, Intro überspringen
   (Gachiakuta S1E2, Sprung bei 0:47), Abspann überspringen, Folgenwechsel mit
   Zählung, Verlängerung bei echter Mausbewegung, Ende (zwei Minuten ohne
-  Eingabe stabil: pausiert, schwarz, kein Weiterschalten), Aufwachen mit
-  zurückgesetzter Lautstärke, Autoplay-Sperre. Nicht live gesehen: die
+  Eingabe stabil: pausiert, schwarz, kein Weiterschalten), Folgenwechsel
+  durch Disney+ im Zustand „Beendet" (neue Folge wird sofort pausiert, Sitzung
+  bleibt), Aufwachen mit zurückgesetzter Lautstärke, Autoplay-Sperre. Nicht live gesehen: die
   Inaktivitätsfrage.
 - **Netflix „Schaust du noch?":** Bewusst nicht live getestet (erscheint erst
   nach Stunden). Der Selektor `interrupt-autoplay-continue` ist im Netflix-

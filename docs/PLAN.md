@@ -121,3 +121,13 @@ beobachten, ob nach dem Ende eine Folge ohne Eingabe weiterläuft.
 dem Standardordner der Userscripts-App. Verbleibende Schritte für den Nutzer:
 Userscripts in Safari aktivieren, für netflix.com und disneyplus.com erlauben,
 Seite neu laden.
+
+## Nachstellung des Folgenübergangs im Zustand „Beendet" (2026-10-09, 17:30)
+
+Disney+ Simpsons S9E17: Sitzung im Abspann gestartet, „done" um 17:30:12. Dann
+per Skript die „Als Nächstes"-Kachel geklickt, Disney+ wechselte zur nächsten
+Folge (neue URL, neues Video-Element hivePlayer4). Ergebnis: Sitzung blieb 20 s
+lang „Beendet", neues Video sofort pausiert, Lautstärke 0, Deckkraft 1, kein
+Protokolleintrag für Teardown oder URL-Verlassen. Aufwachen um 17:31:22 per
+Maus, Lautstärke 1, Video pausiert. Der Übergang, der beim einmaligen
+Selbst-Beenden im Spiel war, wird vom aktuellen Stand also sauber überstanden.
