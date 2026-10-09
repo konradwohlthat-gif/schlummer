@@ -7,28 +7,48 @@ import { fullscreenRoot } from './util.js';
 //   gerendert wird. Fehlt sie, wird die Leiste per synthetischem mousemove kurz geweckt.
 // - Knöpfe: skip-overlay (Intro), up-next-lite-v1 (nächste Folge), inactivity-overlay.
 
-const WAKE_EVERY_MS = 5000;
+// - video.currentTime ist nur die Position im Puffer-Fenster (seekable ≈ 60 s), nicht die
+//   absolute Position. Absolut = Regler (aria-valuenow). Ohne sichtbare Leiste wird
+//   currentTime plus zuletzt gemessenem Versatz verwendet; springt currentTime zurück
+//   (neues Fenster), wird die Leiste geweckt und neu synchronisiert.
+
+const WAKE_EVERY_MS = 4000;
 let lastWake = 0;
 const durationCache = new Map(); // episodeId → Sekunden
+let pos = { key: null, offset: 0, lastRel: null, synced: false };
 
-function shadowButton(tag) {
+function shadowRoots(tag) {
   const host = document.querySelector(tag);
   const root = host && host.shadowRoot;
-  if (!root) return null;
-  const b = root.querySelector('button');
-  return b && b.getClientRects().length > 0 ? b : null;
-}
-
-function readSliderMax() {
-  const host = document.querySelector('main-app-controls-overlay');
-  const root = host && host.shadowRoot;
-  if (!root) return null;
+  if (!root) return [];
   const roots = [root];
   for (const el of root.querySelectorAll('*')) if (el.shadowRoot) roots.push(el.shadowRoot);
-  for (const r of roots) {
+  return roots;
+}
+
+function visible(el) {
+  return !!el && el.getClientRects().length > 0;
+}
+
+/** Erster sichtbarer Knopf im Shadow DOM eines Custom Elements, optional ohne "Schließen". */
+function shadowButton(tag, { skipClose = true } = {}) {
+  for (const r of shadowRoots(tag)) {
+    for (const b of r.querySelectorAll('button')) {
+      if (!visible(b)) continue;
+      if (skipClose && /schlie\u00dfen|close/i.test((b.getAttribute('aria-label') || '') + ' ' + (b.textContent || ''))) continue;
+      return b;
+    }
+  }
+  return null;
+}
+
+function readSlider() {
+  for (const r of shadowRoots('main-app-controls-overlay')) {
     const s = r.querySelector('[aria-valuemax]');
-    const max = s && Number(s.getAttribute('aria-valuemax'));
-    if (max && Number.isFinite(max) && max > 60) return max;
+    if (!s) continue;
+    const max = Number(s.getAttribute('aria-valuemax'));
+    const now = Number(s.getAttribute('aria-valuenow'));
+    if (Number.isFinite(max) && max > 60) return { max, now: Number.isFinite(now) ? now : null };
   }
   return null;
 }
@@ -61,18 +81,41 @@ export const disney = {
   getDuration: (video) => {
     if (video && Number.isFinite(video.duration) && video.duration > 0) return video.duration;
     const key = disney.episodeId();
-    const fromSlider = readSliderMax();
-    if (fromSlider) {
-      if (key) durationCache.set(key, fromSlider);
-      return fromSlider;
+    const slider = readSlider();
+    if (slider) {
+      if (key) durationCache.set(key, slider.max);
+      return slider.max;
     }
     if (key && durationCache.has(key)) return durationCache.get(key);
     wakeControls();
     return NaN;
   },
+  getPosition: (video) => {
+    if (!video) return 0;
+    const key = disney.episodeId();
+    if (key !== pos.key) pos = { key, offset: 0, lastRel: null, synced: false };
+    const rel = video.currentTime || 0;
+    const slider = readSlider();
+    if (slider && slider.now !== null) {
+      pos.offset = slider.now - rel;
+      pos.synced = true;
+      pos.lastRel = rel;
+      return slider.now;
+    }
+    if (pos.lastRel !== null && rel < pos.lastRel - 2) pos.synced = false; // neues Puffer-Fenster
+    pos.lastRel = rel;
+    if (!pos.synced) wakeControls();
+    return Math.max(0, rel + pos.offset);
+  },
   findSkipIntro: () => shadowButton('skip-overlay'),
   findSkipRecap: () => null,
-  findNextEpisode: () => shadowButton('up-next-lite-v1'),
+  findNextEpisode: () => {
+    for (const r of shadowRoots('end-card-overlay')) {
+      const tile = r.querySelector('button.end-card-overlay__content-tile');
+      if (visible(tile)) return tile;
+    }
+    return shadowButton('up-next-lite-v1');
+  },
   findStillWatching: () => shadowButton('inactivity-overlay'),
   isSeriesEnd: () => false,
   fullscreenRoot: () => fullscreenRoot(document),

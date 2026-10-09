@@ -48,26 +48,38 @@
   };
 
   // src/adapters/disney.js
-  var WAKE_EVERY_MS = 5e3;
+  var WAKE_EVERY_MS = 4e3;
   var lastWake = 0;
   var durationCache = /* @__PURE__ */ new Map();
-  function shadowButton(tag) {
+  var pos = { key: null, offset: 0, lastRel: null, synced: false };
+  function shadowRoots(tag) {
     const host = document.querySelector(tag);
     const root = host && host.shadowRoot;
-    if (!root) return null;
-    const b = root.querySelector("button");
-    return b && b.getClientRects().length > 0 ? b : null;
-  }
-  function readSliderMax() {
-    const host = document.querySelector("main-app-controls-overlay");
-    const root = host && host.shadowRoot;
-    if (!root) return null;
+    if (!root) return [];
     const roots = [root];
     for (const el of root.querySelectorAll("*")) if (el.shadowRoot) roots.push(el.shadowRoot);
-    for (const r of roots) {
+    return roots;
+  }
+  function visible(el) {
+    return !!el && el.getClientRects().length > 0;
+  }
+  function shadowButton(tag, { skipClose = true } = {}) {
+    for (const r of shadowRoots(tag)) {
+      for (const b of r.querySelectorAll("button")) {
+        if (!visible(b)) continue;
+        if (skipClose && /schlie\u00dfen|close/i.test((b.getAttribute("aria-label") || "") + " " + (b.textContent || ""))) continue;
+        return b;
+      }
+    }
+    return null;
+  }
+  function readSlider() {
+    for (const r of shadowRoots("main-app-controls-overlay")) {
       const s = r.querySelector("[aria-valuemax]");
-      const max = s && Number(s.getAttribute("aria-valuemax"));
-      if (max && Number.isFinite(max) && max > 60) return max;
+      if (!s) continue;
+      const max = Number(s.getAttribute("aria-valuemax"));
+      const now2 = Number(s.getAttribute("aria-valuenow"));
+      if (Number.isFinite(max) && max > 60) return { max, now: Number.isFinite(now2) ? now2 : null };
     }
     return null;
   }
@@ -95,18 +107,41 @@
     getDuration: (video) => {
       if (video && Number.isFinite(video.duration) && video.duration > 0) return video.duration;
       const key = disney.episodeId();
-      const fromSlider = readSliderMax();
-      if (fromSlider) {
-        if (key) durationCache.set(key, fromSlider);
-        return fromSlider;
+      const slider = readSlider();
+      if (slider) {
+        if (key) durationCache.set(key, slider.max);
+        return slider.max;
       }
       if (key && durationCache.has(key)) return durationCache.get(key);
       wakeControls();
       return NaN;
     },
+    getPosition: (video) => {
+      if (!video) return 0;
+      const key = disney.episodeId();
+      if (key !== pos.key) pos = { key, offset: 0, lastRel: null, synced: false };
+      const rel = video.currentTime || 0;
+      const slider = readSlider();
+      if (slider && slider.now !== null) {
+        pos.offset = slider.now - rel;
+        pos.synced = true;
+        pos.lastRel = rel;
+        return slider.now;
+      }
+      if (pos.lastRel !== null && rel < pos.lastRel - 2) pos.synced = false;
+      pos.lastRel = rel;
+      if (!pos.synced) wakeControls();
+      return Math.max(0, rel + pos.offset);
+    },
     findSkipIntro: () => shadowButton("skip-overlay"),
     findSkipRecap: () => null,
-    findNextEpisode: () => shadowButton("up-next-lite-v1"),
+    findNextEpisode: () => {
+      for (const r of shadowRoots("end-card-overlay")) {
+        const tile = r.querySelector("button.end-card-overlay__content-tile");
+        if (visible(tile)) return tile;
+      }
+      return shadowButton("up-next-lite-v1");
+    },
     findStillWatching: () => shadowButton("inactivity-overlay"),
     isSeriesEnd: () => false,
     fullscreenRoot: () => fullscreenRoot(document)
@@ -658,15 +693,16 @@
     let holdPauseUntil = 0;
     const clickedAt = /* @__PURE__ */ new WeakMap();
     const durationOf = (v) => adapter.getDuration ? adapter.getDuration(v) : v.duration;
+    const positionOf = (v) => adapter.getPosition ? adapter.getPosition(v) : v.currentTime || 0;
     const hasMeta = (v) => {
       if (!v) return false;
       const d = durationOf(v);
       return Number.isFinite(d) && d > 0;
     };
-    const stats = (v) => ({ duration: hasMeta(v) ? durationOf(v) : 0, currentTime: v.currentTime || 0, ended: !!(v.ended || endedFlag) });
-    const visible = (el) => !!el && el.isConnected && el.getClientRects().length > 0;
+    const stats = (v) => ({ duration: hasMeta(v) ? durationOf(v) : 0, currentTime: positionOf(v), ended: !!(v.ended || endedFlag) });
+    const visible2 = (el) => !!el && el.isConnected && el.getClientRects().length > 0;
     function clickOnce(el) {
-      if (!visible(el)) return false;
+      if (!visible2(el)) return false;
       const t = clickedAt.get(el) || 0;
       if (now() - t < CLICK_REPEAT_MS) return false;
       clickedAt.set(el, now());
@@ -798,7 +834,7 @@
       if (!video || !hasMeta(video)) return false;
       if (video !== ps.oldVideo) return true;
       if (Math.abs(durationOf(video) - ps.prev.duration) > 1) return true;
-      if (video.currentTime < ps.prev.currentTime - 5) return true;
+      if (positionOf(video) < ps.prev.currentTime - 5) return true;
       return now() - ps.at > SWITCH_TIMEOUT_MS;
     }
     function onEnded(e) {

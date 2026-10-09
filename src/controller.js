@@ -42,8 +42,9 @@ export function startController({ adapter, settings, doc = document, win = windo
 
   // ---------- Hilfen ----------
   const durationOf = (v) => (adapter.getDuration ? adapter.getDuration(v) : v.duration);
+  const positionOf = (v) => (adapter.getPosition ? adapter.getPosition(v) : v.currentTime || 0);
   const hasMeta = (v) => { if (!v) return false; const d = durationOf(v); return Number.isFinite(d) && d > 0; };
-  const stats = (v) => ({ duration: hasMeta(v) ? durationOf(v) : 0, currentTime: v.currentTime || 0, ended: !!(v.ended || endedFlag) });
+  const stats = (v) => ({ duration: hasMeta(v) ? durationOf(v) : 0, currentTime: positionOf(v), ended: !!(v.ended || endedFlag) });
   const visible = (el) => !!el && el.isConnected && el.getClientRects().length > 0;
 
   function clickOnce(el) {
@@ -187,7 +188,7 @@ export function startController({ adapter, settings, doc = document, win = windo
     if (!video || !hasMeta(video)) return false;
     if (video !== ps.oldVideo) return true;
     if (Math.abs(durationOf(video) - ps.prev.duration) > 1) return true;
-    if (video.currentTime < ps.prev.currentTime - 5) return true;
+    if (positionOf(video) < ps.prev.currentTime - 5) return true;
     return now() - ps.at > SWITCH_TIMEOUT_MS;
   }
 
