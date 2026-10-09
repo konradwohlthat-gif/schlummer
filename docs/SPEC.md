@@ -126,7 +126,13 @@ während der Verzögerung hat keine Wirkung (Fortschritt ist 0).
   pausiert (Listener auf `play` und auf Folgenwechsel).
 - Erste Interaktion nach dem Ende: Ebene entfernen, Ausgangslautstärke
   zurücksetzen, Schlafmodus aus. Video bleibt pausiert. Ton kommt erst bei
-  bewusstem Play.
+  bewusstem Play. Da Netflix' Autoplay nur durch unser Pausieren zurückgehalten
+  wurde, unterdrückt das Skript nach dem Aufwachen 30 s lang jedes Abspielen,
+  das nicht unmittelbar (1,5 s) auf eine Nutzereingabe folgt.
+- Es wird nie `video.muted` gesetzt, nur die Lautstärke: Netflix übernimmt
+  beides in seinen eigenen Zustand, und ein Stummschalten könnte hängen bleiben.
+  Nach dem Ausschalten wird die Ausgangslautstärke 6 s lang auf jedes neue
+  Video-Element nachgezogen.
 - Nebeneffekt: Pausiertes Video hält den Mac nicht wach, macOS schaltet den
   Bildschirm nach Systemeinstellung ab. README empfiehlt 5 bis 10 Minuten.
 - Verworfen: Sprung zur Startseite (hell, Trailer halten Mac wach).

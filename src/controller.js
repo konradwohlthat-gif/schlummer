@@ -11,6 +11,8 @@ const WAKE_MOVE_PX = 12;            // Mindest-Mausbewegung zum Aufwachen
 const USER_VOLUME_WINDOW_MS = 1500; // Lautstärkeänderung kurz nach Eingabe = Nutzer
 const CLICK_REPEAT_MS = 1500;
 const RESTORE_MS = 6000;            // nach dem Ausschalten: Lautstärke auf neue Video-Elemente nachziehen
+const HOLD_PAUSE_MS = 30000;        // nach dem Aufwachen: Autoplay unterdrücken, bis der Nutzer selbst startet
+const USER_PLAY_WINDOW_MS = 1500;   // Play kurz nach einer Eingabe gilt als vom Nutzer gewollt
 const SWITCH_TIMEOUT_MS = 4000;     // Folgenwechsel spätestens dann verarbeiten
 
 const now = () => Date.now();
@@ -34,7 +36,8 @@ export function startController({ adapter, settings, doc = document, win = windo
   let mounted = false;
   let stopped = false;
   let nextClickedKey = null;  // Sicherung: "Nächste Folge" höchstens einmal pro Folge
-  let restore = null;         // { until, base, unmute } nach dem Ausschalten
+  let restore = null;         // { until, base } nach dem Ausschalten
+  let holdPauseUntil = 0;     // nach dem Aufwachen: Netflix-Autoplay zurückhalten
   const clickedAt = new WeakMap();
 
   // ---------- Hilfen ----------
@@ -104,7 +107,11 @@ export function startController({ adapter, settings, doc = document, win = windo
   function exitSleep() {
     if (!session) return;
     const base = session.base;
+    const wasDone = session.done;
     session = null;
+    // Nach dem Ende hält nur unser Pausieren Netflix' Autoplay zurück. Nach dem
+    // Aufwachen soll nichts von selbst loslaufen, bis der Nutzer bewusst startet.
+    holdPauseUntil = wasDone ? now() + HOLD_PAUSE_MS : 0;
     overlay.setDim(0);
     overlay.setWarm(0);
     // Netflix legt beim Folgenwechsel neue Video-Elemente an und übernimmt die
@@ -262,9 +269,20 @@ export function startController({ adapter, settings, doc = document, win = windo
     }
   }
 
+  function userJustActed() {
+    return now() - lastUserInputAt < USER_PLAY_WINDOW_MS;
+  }
+
   function onPlay(e) {
-    if (session && session.done && e.target === video) {
-      try { video.pause(); } catch { /* ignorieren */ }
+    const v = e.target;
+    if (!(v instanceof HTMLMediaElement)) return;
+    if (session && session.done && v === video) {
+      try { v.pause(); } catch { /* ignorieren */ }
+      return;
+    }
+    if (!session && now() < holdPauseUntil) {
+      if (userJustActed()) holdPauseUntil = 0;
+      else { try { v.pause(); } catch { /* ignorieren */ } }
     }
   }
 
@@ -327,7 +345,13 @@ export function startController({ adapter, settings, doc = document, win = windo
       panel.notice('Serie zu Ende');
     }
     if (session) applyOutputs();
-    else applyRestore();
+    else {
+      applyRestore();
+      if (holdPauseUntil && now() < holdPauseUntil && video && !video.paused) {
+        if (userJustActed()) holdPauseUntil = 0;
+        else { try { video.pause(); } catch { /* ignorieren */ } }
+      }
+    }
     runSkips();
     panel.update();
   }

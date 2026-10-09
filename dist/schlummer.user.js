@@ -572,6 +572,8 @@
   var USER_VOLUME_WINDOW_MS = 1500;
   var CLICK_REPEAT_MS = 1500;
   var RESTORE_MS = 6e3;
+  var HOLD_PAUSE_MS = 3e4;
+  var USER_PLAY_WINDOW_MS = 1500;
   var SWITCH_TIMEOUT_MS = 4e3;
   var now = () => Date.now();
   function startController({ adapter, settings, doc = document, win = window }) {
@@ -593,6 +595,7 @@
     let stopped = false;
     let nextClickedKey = null;
     let restore = null;
+    let holdPauseUntil = 0;
     const clickedAt = /* @__PURE__ */ new WeakMap();
     const hasMeta = (v) => !!v && Number.isFinite(v.duration) && v.duration > 0;
     const stats = (v) => ({ duration: hasMeta(v) ? v.duration : 0, currentTime: v.currentTime || 0, ended: !!(v.ended || endedFlag) });
@@ -654,7 +657,9 @@
     function exitSleep() {
       if (!session) return;
       const base = session.base;
+      const wasDone = session.done;
       session = null;
+      holdPauseUntil = wasDone ? now() + HOLD_PAUSE_MS : 0;
       overlay.setDim(0);
       overlay.setWarm(0);
       restore = { until: now() + RESTORE_MS, base };
@@ -802,11 +807,26 @@
         applyOutputs();
       }
     }
+    function userJustActed() {
+      return now() - lastUserInputAt < USER_PLAY_WINDOW_MS;
+    }
     function onPlay(e) {
-      if (session && session.done && e.target === video) {
+      const v = e.target;
+      if (!(v instanceof HTMLMediaElement)) return;
+      if (session && session.done && v === video) {
         try {
-          video.pause();
+          v.pause();
         } catch {
+        }
+        return;
+      }
+      if (!session && now() < holdPauseUntil) {
+        if (userJustActed()) holdPauseUntil = 0;
+        else {
+          try {
+            v.pause();
+          } catch {
+          }
         }
       }
     }
@@ -863,7 +883,18 @@
         panel.notice("Serie zu Ende");
       }
       if (session) applyOutputs();
-      else applyRestore();
+      else {
+        applyRestore();
+        if (holdPauseUntil && now() < holdPauseUntil && video && !video.paused) {
+          if (userJustActed()) holdPauseUntil = 0;
+          else {
+            try {
+              video.pause();
+            } catch {
+            }
+          }
+        }
+      }
       runSkips();
       panel.update();
     }
