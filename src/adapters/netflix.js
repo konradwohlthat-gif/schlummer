@@ -1,4 +1,4 @@
-import { visibleQuery as q, findButtonByText, fullscreenRoot } from './util.js';
+import { visibleQuery as q, fullscreenRoot } from './util.js';
 
 export const netflix = {
   id: 'netflix',
@@ -8,9 +8,14 @@ export const netflix = {
   isPlayerPage: () => /^\/watch\//.test(location.pathname),
   episodeId: () => (location.pathname.match(/^\/watch\/(\d+)/) || [])[1] || null,
   getVideo: () => document.querySelector('video'),
-  findSkipIntro: () => q('[data-uia="player-skip-intro"]') || findButtonByText([/^Intro überspringen$/i, /^Skip Intro$/i]),
-  findSkipRecap: () => q('[data-uia="player-skip-recap"]') || q('[data-uia="player-skip-preplay"]') || findButtonByText([/^(Rückblick|Zusammenfassung) überspringen$/i, /^Skip Recap$/i]),
-  findNextEpisode: () => q('[data-uia="next-episode-seamless-button"]') || q('[data-uia="next-episode-seamless-button-draining"]') || findButtonByText([/^Nächste Folge$/i, /^Next Episode$/i]),
+  // Nur stabile data-uia-Selektoren. Kein Text-Fallback: Der normale
+  // "Nächste Folge"-Knopf in der Steuerleiste (control-next) trägt denselben
+  // Text und darf nie automatisch geklickt werden.
+  findSkipIntro: () => q('[data-uia="player-skip-intro"]'),
+  findSkipRecap: () => q('[data-uia="player-skip-recap"]') || q('[data-uia="player-skip-preplay"]'),
+  findNextEpisode: () => q('[data-uia="next-episode-seamless-button"]') || q('[data-uia="next-episode-seamless-button-draining"]'),
   findStillWatching: () => q('[data-uia="interrupt-autoplay-continue"]') || null,
+  // Serienende: Netflix zeigt eine Empfehlung mit Trailer unter derselben URL
+  isSeriesEnd: () => !!document.querySelector('[data-uia="postplay-back-to-browse"], [data-uia="postplay-background-play-trailer"]'),
   fullscreenRoot: () => fullscreenRoot(document),
 };

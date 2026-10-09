@@ -150,3 +150,12 @@ test('episodeIndex', () => {
   assert.equal(M.episodeIndex(plan, 3), 1);
   assert.equal(M.episodeIndex({ ...plan, budget: 1 }, 3), 3);
 });
+
+test('Serienende: finish beendet, currentFinished nach 80 %', () => {
+  let plan = M.createPlan({ episodes: 2, duration: EP, currentTime: 0 });
+  plan = M.tick(plan, { duration: EP, currentTime: 0.9 * EP });
+  assert.equal(M.currentFinished(plan), true);
+  const done = M.finish(plan);
+  assert.equal(done.done, true);
+  close(M.progress(done, { duration: 35, currentTime: 0 }), 1);
+});

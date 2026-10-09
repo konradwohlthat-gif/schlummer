@@ -10,6 +10,7 @@ const WAKE_GRACE_MS = 2000;         // nach dem Ende: so lange keine Aufwach-Erk
 const WAKE_MOVE_PX = 12;            // Mindest-Mausbewegung zum Aufwachen
 const USER_VOLUME_WINDOW_MS = 1500; // Lautstärkeänderung kurz nach Eingabe = Nutzer
 const CLICK_REPEAT_MS = 1500;
+const SWITCH_TIMEOUT_MS = 4000;     // Folgenwechsel spätestens dann verarbeiten
 
 const now = () => Date.now();
 
@@ -32,6 +33,7 @@ export function startController({ adapter, settings, doc = document, win = windo
   let weMuted = false;
   let mounted = false;
   let stopped = false;
+  let nextClickedKey = null;  // Sicherung: "Nächste Folge" höchstens einmal pro Folge
   const clickedAt = new WeakMap();
 
   // ---------- Hilfen ----------
@@ -61,8 +63,12 @@ export function startController({ adapter, settings, doc = document, win = windo
   // ---------- Einstellungen ----------
   function onSettingChange(key, value) {
     const next = sanitize({ ...settings, [key]: value });
+    const delta = next.episodes - settings.episodes;
     Object.assign(settings, next);
     saveSettings(settings);
+    if (key === 'episodes' && delta !== 0 && session && !session.done && video && hasMeta(video)) {
+      session.adjustBudget(delta, stats(video));
+    }
     if (session && !session.done) applyOutputs();
     if (!session) overlay.setWarm(0);
     panel.update();
@@ -98,14 +104,12 @@ export function startController({ adapter, settings, doc = document, win = windo
   function exitSleep() {
     if (!session) return;
     const base = session.base;
-    const wasDone = session.done;
     session = null;
     overlay.setDim(0);
     overlay.setWarm(0);
     if (video) {
       if (weMuted) video.muted = false;
       setVolume(video, base);
-      if (!wasDone && lastApplied !== null) { /* nichts weiter */ }
     }
     weMuted = false;
     panel.update();
@@ -144,8 +148,8 @@ export function startController({ adapter, settings, doc = document, win = windo
 
   // ---------- Video / Folgenwechsel ----------
   function onVideoChange(v, key) {
-    if (session && !session.done && lastStats && (key !== episodeKey)) {
-      if (!pendingSwitch) pendingSwitch = { prev: { ...lastStats } };
+    if (session && !session.done && lastStats && key !== episodeKey) {
+      if (!pendingSwitch) pendingSwitch = { prev: { ...lastStats }, oldVideo: video, at: now() };
     }
     if (v !== video) {
       video = v;
@@ -162,6 +166,15 @@ export function startController({ adapter, settings, doc = document, win = windo
     }
   }
 
+  /** Neues Video wirklich da? Sonst wartet der Folgenwechsel noch. */
+  function switchReady(ps) {
+    if (!video || !hasMeta(video)) return false;
+    if (video !== ps.oldVideo) return true;
+    if (Math.abs(video.duration - ps.prev.duration) > 1) return true;
+    if (video.currentTime < ps.prev.currentTime - 5) return true;
+    return now() - ps.at > SWITCH_TIMEOUT_MS;
+  }
+
   function onEnded(e) {
     if (e.target === video) endedFlag = true;
   }
@@ -175,9 +188,9 @@ export function startController({ adapter, settings, doc = document, win = windo
     const sleeping = !!session && !session.done;
     const lastEpisode = sleeping && session.plan.budget <= 1;
     const finished = !!session && session.done;
-    if (!lastEpisode && !finished) {
-      if (settings.skipCredits) clickOnce(adapter.findNextEpisode());
-      else if (sleeping && video && (video.ended || endedFlag)) clickOnce(adapter.findNextEpisode());
+    if (!lastEpisode && !finished && nextClickedKey !== episodeKey) {
+      const wantNext = settings.skipCredits || (sleeping && video && (video.ended || endedFlag));
+      if (wantNext && clickOnce(adapter.findNextEpisode())) nextClickedKey = episodeKey;
     }
     if (sleeping) clickOnce(adapter.findStillWatching());
   }
@@ -290,13 +303,20 @@ export function startController({ adapter, settings, doc = document, win = windo
     if (video && hasMeta(video)) {
       if (session && !session.done) {
         if (pendingSwitch) {
-          session.episodeChanged(pendingSwitch.prev, stats(video));
-          pendingSwitch = null;
+          if (switchReady(pendingSwitch)) {
+            session.episodeChanged(pendingSwitch.prev, stats(video));
+            pendingSwitch = null;
+          }
         } else {
           session.tick(stats(video));
         }
       }
-      lastStats = stats(video);
+      if (!pendingSwitch) lastStats = stats(video);
+    }
+    if (session && !session.done && adapter.isSeriesEnd && adapter.isSeriesEnd()) {
+      session.finish();
+      pendingSwitch = null;
+      panel.notice('Serie zu Ende');
     }
     if (session) applyOutputs();
     runSkips();

@@ -22,15 +22,13 @@
     const el = root.querySelector(sel);
     return el && el.isConnected && el.getClientRects().length > 0 ? el : null;
   }
-  function findButtonByText(patterns, root = document) {
+  function findButtonByText(patterns, { root = document, exclude = null } = {}) {
     const buttons = root.querySelectorAll('button, [role="button"]');
     for (const b of buttons) {
+      if (exclude && b.closest(exclude)) continue;
       const txt = (b.textContent || "").trim();
-      const aria = b.getAttribute("aria-label") || "";
       for (const p of patterns) {
-        if (p.test(txt) || p.test(aria)) {
-          if (b.getClientRects().length > 0) return b;
-        }
+        if (p.test(txt) && b.getClientRects().length > 0) return b;
       }
     }
     return null;
@@ -48,14 +46,20 @@
     isPlayerPage: () => /^\/watch\//.test(location.pathname),
     episodeId: () => (location.pathname.match(/^\/watch\/(\d+)/) || [])[1] || null,
     getVideo: () => document.querySelector("video"),
-    findSkipIntro: () => visibleQuery('[data-uia="player-skip-intro"]') || findButtonByText([/^Intro überspringen$/i, /^Skip Intro$/i]),
-    findSkipRecap: () => visibleQuery('[data-uia="player-skip-recap"]') || visibleQuery('[data-uia="player-skip-preplay"]') || findButtonByText([/^(Rückblick|Zusammenfassung) überspringen$/i, /^Skip Recap$/i]),
-    findNextEpisode: () => visibleQuery('[data-uia="next-episode-seamless-button"]') || visibleQuery('[data-uia="next-episode-seamless-button-draining"]') || findButtonByText([/^Nächste Folge$/i, /^Next Episode$/i]),
+    // Nur stabile data-uia-Selektoren. Kein Text-Fallback: Der normale
+    // "Nächste Folge"-Knopf in der Steuerleiste (control-next) trägt denselben
+    // Text und darf nie automatisch geklickt werden.
+    findSkipIntro: () => visibleQuery('[data-uia="player-skip-intro"]'),
+    findSkipRecap: () => visibleQuery('[data-uia="player-skip-recap"]') || visibleQuery('[data-uia="player-skip-preplay"]'),
+    findNextEpisode: () => visibleQuery('[data-uia="next-episode-seamless-button"]') || visibleQuery('[data-uia="next-episode-seamless-button-draining"]'),
     findStillWatching: () => visibleQuery('[data-uia="interrupt-autoplay-continue"]') || null,
+    // Serienende: Netflix zeigt eine Empfehlung mit Trailer unter derselben URL
+    isSeriesEnd: () => !!document.querySelector('[data-uia="postplay-back-to-browse"], [data-uia="postplay-background-play-trailer"]'),
     fullscreenRoot: () => fullscreenRoot(document)
   };
 
   // src/adapters/disney.js
+  var CONTROLS = '[data-testid="controls-container"], .controls__footer, .btm-media-overlays-container .controls, [class*="control-bar"], [class*="controls-footer"]';
   var disney = {
     id: "disney",
     name: "Disney+",
@@ -64,10 +68,12 @@
     isPlayerPage: () => /\/(video|play)\//.test(location.pathname),
     episodeId: () => (location.pathname.match(/\/(?:video|play)\/([^/?#]+)/) || [])[1] || null,
     getVideo: () => document.querySelector("video"),
-    findSkipIntro: () => visibleQuery('[data-testid="skip-intro"]') || visibleQuery("button.skip__button") || findButtonByText([/intro überspringen/i, /skip intro/i]),
-    findSkipRecap: () => visibleQuery('[data-testid="skip-recap"]') || findButtonByText([/(rückblick|zusammenfassung) überspringen/i, /skip recap/i]),
-    findNextEpisode: () => visibleQuery('[data-testid="up-next-play-button"]') || findButtonByText([/^nächste folge$/i, /^next episode$/i]),
+    // Selektoren werden an der Live-Seite verifiziert. Text-Fallbacks ignorieren die Steuerleiste.
+    findSkipIntro: () => visibleQuery('[data-testid="skip-intro"]') || findButtonByText([/^intro überspringen$/i, /^skip intro$/i], { exclude: CONTROLS }),
+    findSkipRecap: () => visibleQuery('[data-testid="skip-recap"]') || findButtonByText([/^(rückblick|zusammenfassung) überspringen$/i, /^skip recap$/i], { exclude: CONTROLS }),
+    findNextEpisode: () => visibleQuery('[data-testid="up-next-play-button"]') || null,
     findStillWatching: () => null,
+    isSeriesEnd: () => false,
     fullscreenRoot: () => fullscreenRoot(document)
   };
 
@@ -164,7 +170,8 @@
     let root = null;
     return {
       mount(el) {
-        if (!el || root === el) return;
+        if (!el) return;
+        if (root === el && warm.parentNode === el && dark.parentNode === el) return;
         root = el;
         el.appendChild(warm);
         el.appendChild(dark);
@@ -191,7 +198,7 @@
   // src/panel.js
   var HIDE_AFTER_MS = 3e3;
   var CSS = `
-.schlummer-panel{position:fixed;top:24px;right:24px;z-index:2147483100;width:300px;box-sizing:border-box;
+.schlummer-panel{position:fixed;top:72px;right:24px;z-index:2147483100;width:300px;box-sizing:border-box;
   background:rgba(18,18,18,.94);color:#fff;font:14px/1.4 -apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;
   border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.55);opacity:0;pointer-events:none;
   transition:opacity .25s;user-select:none;-webkit-user-select:none;text-align:left}
@@ -344,7 +351,8 @@
     return {
       el,
       mount(r) {
-        if (!r || root === r) return;
+        if (!r) return;
+        if (root === r && el.parentNode === r) return;
         root = r;
         r.appendChild(el);
       },
@@ -462,6 +470,12 @@
     out.anchor = { p: threshold, R: remaining(out, v) };
     return { plan: out, added };
   }
+  function finish(plan) {
+    return { ...plan, budget: 0, done: true };
+  }
+  function currentFinished(plan) {
+    return plan.len > 0 && plan.maxSeen >= FINISHED_FRACTION * plan.len;
+  }
   function curveValue(curve, x) {
     const c = clamp3(x, 0, 1);
     return curve === "linear" ? c : Math.pow(c, PERCEPTUAL_EXPONENT);
@@ -514,6 +528,21 @@
         plan = episodeChanged(plan, prev, next);
         if (plan.budget < before) finishedCount += 1;
       },
+      /** Serienende: beenden, aktuelle Folge zählen, wenn zu Ende gesehen. */
+      finish() {
+        if (plan.done) return;
+        if (currentFinished(plan)) finishedCount += 1;
+        plan = finish(plan);
+      },
+      /** Folgenanzahl im laufenden Modus ändern: Budget anpassen, Linie am aktuellen Stand neu verankern. */
+      adjustBudget(delta, v) {
+        if (plan.done) return;
+        const budget = Math.max(1, plan.budget + delta);
+        if (budget === plan.budget) return;
+        const p = progress(plan, v);
+        plan = { ...plan, budget };
+        if (plan.anchor) plan.anchor = { p, R: remaining(plan, v) };
+      },
       /** @returns {{added:number, changed:boolean}} */
       interact(v) {
         const r = interact(plan, v);
@@ -542,6 +571,7 @@
   var WAKE_MOVE_PX = 12;
   var USER_VOLUME_WINDOW_MS = 1500;
   var CLICK_REPEAT_MS = 1500;
+  var SWITCH_TIMEOUT_MS = 4e3;
   var now = () => Date.now();
   function startController({ adapter, settings, doc = document, win = window }) {
     const overlay = createOverlay(doc);
@@ -561,6 +591,7 @@
     let weMuted = false;
     let mounted = false;
     let stopped = false;
+    let nextClickedKey = null;
     const clickedAt = /* @__PURE__ */ new WeakMap();
     const hasMeta = (v) => !!v && Number.isFinite(v.duration) && v.duration > 0;
     const stats = (v) => ({ duration: hasMeta(v) ? v.duration : 0, currentTime: v.currentTime || 0, ended: !!(v.ended || endedFlag) });
@@ -587,8 +618,12 @@
     }
     function onSettingChange(key, value) {
       const next = sanitize({ ...settings, [key]: value });
+      const delta = next.episodes - settings.episodes;
       Object.assign(settings, next);
       saveSettings(settings);
+      if (key === "episodes" && delta !== 0 && session && !session.done && video && hasMeta(video)) {
+        session.adjustBudget(delta, stats(video));
+      }
       if (session && !session.done) applyOutputs();
       if (!session) overlay.setWarm(0);
       panel.update();
@@ -619,15 +654,12 @@
     function exitSleep() {
       if (!session) return;
       const base = session.base;
-      const wasDone = session.done;
       session = null;
       overlay.setDim(0);
       overlay.setWarm(0);
       if (video) {
         if (weMuted) video.muted = false;
         setVolume(video, base);
-        if (!wasDone && lastApplied !== null) {
-        }
       }
       weMuted = false;
       panel.update();
@@ -676,7 +708,7 @@
     }
     function onVideoChange(v, key) {
       if (session && !session.done && lastStats && key !== episodeKey) {
-        if (!pendingSwitch) pendingSwitch = { prev: { ...lastStats } };
+        if (!pendingSwitch) pendingSwitch = { prev: { ...lastStats }, oldVideo: video, at: now() };
       }
       if (v !== video) {
         video = v;
@@ -692,6 +724,13 @@
         endedFlag = false;
       }
     }
+    function switchReady(ps) {
+      if (!video || !hasMeta(video)) return false;
+      if (video !== ps.oldVideo) return true;
+      if (Math.abs(video.duration - ps.prev.duration) > 1) return true;
+      if (video.currentTime < ps.prev.currentTime - 5) return true;
+      return now() - ps.at > SWITCH_TIMEOUT_MS;
+    }
     function onEnded(e) {
       if (e.target === video) endedFlag = true;
     }
@@ -703,9 +742,9 @@
       const sleeping = !!session && !session.done;
       const lastEpisode = sleeping && session.plan.budget <= 1;
       const finished = !!session && session.done;
-      if (!lastEpisode && !finished) {
-        if (settings.skipCredits) clickOnce(adapter.findNextEpisode());
-        else if (sleeping && video && (video.ended || endedFlag)) clickOnce(adapter.findNextEpisode());
+      if (!lastEpisode && !finished && nextClickedKey !== episodeKey) {
+        const wantNext = settings.skipCredits || sleeping && video && (video.ended || endedFlag);
+        if (wantNext && clickOnce(adapter.findNextEpisode())) nextClickedKey = episodeKey;
       }
       if (sleeping) clickOnce(adapter.findStillWatching());
     }
@@ -808,13 +847,20 @@
       if (video && hasMeta(video)) {
         if (session && !session.done) {
           if (pendingSwitch) {
-            session.episodeChanged(pendingSwitch.prev, stats(video));
-            pendingSwitch = null;
+            if (switchReady(pendingSwitch)) {
+              session.episodeChanged(pendingSwitch.prev, stats(video));
+              pendingSwitch = null;
+            }
           } else {
             session.tick(stats(video));
           }
         }
-        lastStats = stats(video);
+        if (!pendingSwitch) lastStats = stats(video);
+      }
+      if (session && !session.done && adapter.isSeriesEnd && adapter.isSeriesEnd()) {
+        session.finish();
+        pendingSwitch = null;
+        panel.notice("Serie zu Ende");
       }
       if (session) applyOutputs();
       runSkips();

@@ -38,6 +38,21 @@ export function createSession({ settings, video, baseVolume }) {
       plan = M.episodeChanged(plan, prev, next);
       if (plan.budget < before) finishedCount += 1;
     },
+    /** Serienende: beenden, aktuelle Folge zählen, wenn zu Ende gesehen. */
+    finish() {
+      if (plan.done) return;
+      if (M.currentFinished(plan)) finishedCount += 1;
+      plan = M.finish(plan);
+    },
+    /** Folgenanzahl im laufenden Modus ändern: Budget anpassen, Linie am aktuellen Stand neu verankern. */
+    adjustBudget(delta, v) {
+      if (plan.done) return;
+      const budget = Math.max(1, plan.budget + delta);
+      if (budget === plan.budget) return;
+      const p = M.progress(plan, v);
+      plan = { ...plan, budget };
+      if (plan.anchor) plan.anchor = { p, R: M.remaining(plan, v) };
+    },
     /** @returns {{added:number, changed:boolean}} */
     interact(v) {
       const r = M.interact(plan, v);

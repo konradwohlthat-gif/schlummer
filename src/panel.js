@@ -4,7 +4,7 @@ import { DEFAULTS } from './settings.js';
 const HIDE_AFTER_MS = 3000;
 
 const CSS = `
-.schlummer-panel{position:fixed;top:24px;right:24px;z-index:2147483100;width:300px;box-sizing:border-box;
+.schlummer-panel{position:fixed;top:72px;right:24px;z-index:2147483100;width:300px;box-sizing:border-box;
   background:rgba(18,18,18,.94);color:#fff;font:14px/1.4 -apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;
   border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.55);opacity:0;pointer-events:none;
   transition:opacity .25s;user-select:none;-webkit-user-select:none;text-align:left}
@@ -161,7 +161,8 @@ export function createPanel({ settings, onSettingChange, onSleepToggle, getStatu
   return {
     el,
     mount(r) {
-      if (!r || root === r) return;
+      if (!r) return;
+      if (root === r && el.parentNode === r) return;
       root = r;
       r.appendChild(el);
     },

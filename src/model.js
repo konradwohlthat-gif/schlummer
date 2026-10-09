@@ -114,6 +114,16 @@ export function interact(plan, v, threshold = EXTEND_THRESHOLD) {
   return { plan: out, added };
 }
 
+/** Serie zu Ende, kein Nachfolger: Sitzung beenden. */
+export function finish(plan) {
+  return { ...plan, budget: 0, done: true };
+}
+
+/** Wurde die aktuelle Folge im Sinne der 80 %-Regel zu Ende gesehen? */
+export function currentFinished(plan) {
+  return plan.len > 0 && plan.maxSeen >= FINISHED_FRACTION * plan.len;
+}
+
 /** Kurvenwert 0..1 für den Anteil x = 1 − p. */
 export function curveValue(curve, x) {
   const c = clamp(x, 0, 1);

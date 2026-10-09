@@ -29,3 +29,13 @@ in Chrome, Abnahme in Safari/Userscripts.
 5. Disney+-Adapter an der Live-Seite ermitteln, testen.
 6. README mit Installationsanleitung, Git-Repo, GitHub `konradwohlthat-gif/schlummer`, Update-URL eintragen.
 7. Checkliste für die Safari-Abnahme.
+
+## Erkenntnisse aus dem Live-Test (Netflix, Chrome)
+
+- `video.currentTime` darf auf Netflix nie direkt gesetzt werden: Der Player
+  bricht mit Fehler M7375 ab. Das Skript liest nur. Zum Spulen im Test wird
+  die interne Player-API benutzt (`netflix.appContext…videoPlayer.seek`).
+- Beim Spulen entfernt Netflix das `<video>`-Element kurzzeitig und legt ein
+  neues an. Der Controller behandelt das als dasselbe Video (URL unverändert).
+- Entwicklung: minifiziertes Bundle einmal in `localStorage['schlummer.dev']`
+  ablegen, nach Reload mit `eval(localStorage.getItem('schlummer.dev'))` laden.

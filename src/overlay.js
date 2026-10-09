@@ -30,7 +30,8 @@ export function createOverlay(doc = document) {
 
   return {
     mount(el) {
-      if (!el || root === el) return;
+      if (!el) return;
+      if (root === el && warm.parentNode === el && dark.parentNode === el) return;
       root = el;
       el.appendChild(warm);
       el.appendChild(dark);
