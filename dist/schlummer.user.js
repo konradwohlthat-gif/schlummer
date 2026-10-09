@@ -713,7 +713,7 @@
         panel.notice("Kein laufendes Video gefunden");
         return;
       }
-      session = createSession({ settings, video, baseVolume: video.volume });
+      session = createSession({ settings, video: stats(video), baseVolume: video.volume });
       lastExtendAt = 0;
       endedFlag = !!video.ended;
       applyOutputs();

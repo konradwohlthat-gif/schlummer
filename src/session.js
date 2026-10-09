@@ -1,6 +1,7 @@
 // Zustand einer laufenden Schlafmodus-Sitzung: Plan, Basis-Lautstärke, Zähler.
 import * as M from './model.js';
 
+/** `video` ist ein Stats-Objekt { duration, currentTime }, nicht das Element (Dauer kommt vom Adapter). */
 export function createSession({ settings, video, baseVolume }) {
   let plan = M.createPlan({
     episodes: settings.episodes,
