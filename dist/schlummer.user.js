@@ -191,12 +191,21 @@
       blueLight: clamp(num(o.blueLight, 0), 0, 1)
     };
   }
+  var GM_TIMEOUT_MS = 1500;
+  function withTimeout(promise, ms) {
+    return Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve(null), ms))]);
+  }
   async function loadSettings() {
     let raw = null;
     try {
-      raw = hasGM() ? await GM.getValue(KEY, null) : localStorage.getItem(KEY);
+      raw = hasGM() ? await withTimeout(GM.getValue(KEY, null), GM_TIMEOUT_MS) : null;
+      if (raw === null || raw === void 0) raw = localStorage.getItem(KEY);
     } catch {
-      raw = null;
+      try {
+        raw = localStorage.getItem(KEY);
+      } catch {
+        raw = null;
+      }
     }
     let parsed = {};
     try {
@@ -957,6 +966,9 @@
     }
     function mountPage() {
       mounted = true;
+      setTimeout(() => {
+        if (mounted && !session) panel.notice("Schlummer bereit · Taste Z öffnet das Panel", 4e3);
+      }, 1500);
     }
     function teardownPage() {
       note("teardown");

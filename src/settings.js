@@ -36,12 +36,20 @@ export function sanitize(s) {
   };
 }
 
+const GM_TIMEOUT_MS = 1500;
+
+function withTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve(null), ms))]);
+}
+
 export async function loadSettings() {
   let raw = null;
   try {
-    raw = hasGM() ? await GM.getValue(KEY, null) : localStorage.getItem(KEY);
+    // GM.getValue darf das Skript nie blockieren: nach 1,5 s weiter mit localStorage.
+    raw = hasGM() ? await withTimeout(GM.getValue(KEY, null), GM_TIMEOUT_MS) : null;
+    if (raw === null || raw === undefined) raw = localStorage.getItem(KEY);
   } catch {
-    raw = null;
+    try { raw = localStorage.getItem(KEY); } catch { raw = null; }
   }
   let parsed = {};
   try {

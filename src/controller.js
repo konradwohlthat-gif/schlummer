@@ -309,6 +309,8 @@ export function startController({ adapter, settings, doc = document, win = windo
   // ---------- Seite / Schleife ----------
   function mountPage() {
     mounted = true;
+    // Sichtbares Lebenszeichen beim Betreten des Players
+    setTimeout(() => { if (mounted && !session) panel.notice('Schlummer bereit · Taste Z öffnet das Panel', 4000); }, 1500);
   }
 
   function teardownPage() {
