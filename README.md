@@ -124,6 +124,13 @@ Zum Ausprobieren in Chrome oder Firefox: den Inhalt von
 `dist/schlummer.user.js` in Tampermonkey/Violentmonkey als neues Skript
 einfügen.
 
+### WebKit-Test ohne Safari (nur für Entwickler)
+
+`npm run test:webkit` lädt das Bundle in eine WKWebView in Safaris isolierter
+Skript-Welt gegen eine Netflix-Attrappe und drückt Z als echtes Tastenereignis.
+Details in `test/webkit/README.md`. Bestätigt am 2026-10-09: Panel, Einblendung
+und Z funktionieren dort, auch wenn `GM.getValue` hängt oder fehlschlägt.
+
 ### Safari per AppleScript prüfen (nur für Entwickler)
 
 Damit sich Safari aus dem Terminal abfragen lässt (zum Beispiel ob das

@@ -131,3 +131,20 @@ lang „Beendet", neues Video sofort pausiert, Lautstärke 0, Deckkraft 1, kein
 Protokolleintrag für Teardown oder URL-Verlassen. Aufwachen um 17:31:22 per
 Maus, Lautstärke 1, Video pausiert. Der Übergang, der beim einmaligen
 Selbst-Beenden im Spiel war, wird vom aktuellen Stand also sauber überstanden.
+
+## Safari-Meldung „Z öffnet das Panel nicht" (2026-10-09, 19:30 bis 19:50)
+
+Nutzermeldung mit der ersten in den Userscripts-Ordner kopierten Datei
+(Stand 4384e1b). Ohne JavaScript-Zugriff auf Safari wurde die isolierte
+Skript-Welt mit einer WKWebView nachgestellt (`test/webkit/harness.swift`):
+
+- `window.top === window` gilt in WebKits isolierter Welt; die entfernte
+  Prüfung war nicht die Ursache (Entfernung bleibt, da überflüssig).
+- Das Bundle läuft dort vollständig: Panel, Einblendung, Z öffnet/schließt,
+  mit echtem Tastenereignis.
+- Mit hängendem `GM.getValue` blieb das alte Bundle für immer in
+  `await loadSettings()` stehen: kein Panel, keine Reaktion. Das passt zum
+  Symptom. Seit 4df6bcd greift nach 1,5 s ein Zeitlimit mit localStorage-
+  Fallback; im Harness bestanden für hängendes, fehlschlagendes und
+  funktionierendes GM.
+- Offen bleibt nur die Bestätigung im echten Safari (Nutzer).
