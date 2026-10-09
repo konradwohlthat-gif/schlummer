@@ -67,6 +67,9 @@ in Chrome, Abnahme in Safari/Userscripts.
 - Intro: `skip-overlay` → Shadow DOM → `button` („Intro überspringen").
 - Abspann: `end-card-overlay` → Shadow DOM → `button.end-card-overlay__content-tile`
   (Kachel „Als Nächstes"), daneben „Schließen" (nie klicken).
+- Intro-Klick live bestätigt (Gachiakuta S1E2: Sprung bei 0:47, danach Position 2:30
+  nach 1:40 Laufzeit). Simpsons S9 hat auf Disney+ keine Intro-Marker.
+- Steuerleiste nur wecken, wenn eine Sitzung läuft (sonst flackert sie alle 4 s).
 - Unverifiziert: `inactivity-overlay` (Inaktivitätsfrage), Serienende.
 - Synthetische Ereignisse sind `isTrusted === false` und zählen nicht als Interaktion.
 
@@ -74,7 +77,11 @@ in Chrome, Abnahme in Safari/Userscripts.
 
 Alle Funktionen des Spec inklusive der vier Zusatzfunktionen sind gebaut und
 auf Netflix live geprüft; Disney+ bis auf Intro-Klick und Inaktivitätsfrage.
-Offen: Abnahme in Safari/Userscripts durch den Nutzer (Checkliste im README),
-Netflix „Schaust du noch?" und Disney+-Intro live sehen. Nebenwirkung der Tests:
+Offen: Abnahme in Safari/Userscripts durch den Nutzer (Checkliste im README).
+Netflix „Schaust du noch?" auf Wunsch des Nutzers nicht live getestet; der
+Selektor `interrupt-autoplay-continue` steht im Netflix-UI-Bundle
+(akiraClient), ebenso `player-skip-intro`, `player-skip-recap`,
+`next-episode-seamless-button(-draining)`, `postplay-back-to-browse`,
+`postplay-background-play-trailer`. Nebenwirkung der Tests:
 Die Netflix-Position von Rick and Morty und die Disney+-Position der Simpsons
 (Staffel 9) im Haushaltsprofil wurden durch die Testläufe verschoben.

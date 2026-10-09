@@ -77,12 +77,14 @@ In Chrome mit den Live-Playern getestet (Stand 2026-10-09):
   (pausiert, Lautstärke 0, schwarz), Aufwachen mit zurückgesetzter
   Lautstärke, Autoplay-Sperre bis zum bewussten Play, Serienende,
   Startverzögerung, Mindestlautstärke, Blaulichtfilter, Standardwerte.
-- **Disney+:** Panel, Dimmen, Positionsverfolgung, Abspann überspringen,
-  Folgenwechsel mit Zählung, Ende, Aufwachen. Nicht live gesehen: der Klick
-  auf „Intro überspringen" (Selektor aus dem DOM übernommen) und die
+- **Disney+:** Panel, Dimmen, Positionsverfolgung, Intro überspringen
+  (Gachiakuta S1E2, Sprung bei 0:47), Abspann überspringen, Folgenwechsel mit
+  Zählung, Ende, Aufwachen, Autoplay-Sperre. Nicht live gesehen: die
   Inaktivitätsfrage.
-- **Noch nicht geprüft:** Netflix „Schaust du noch?" (Selektor aus Erfahrung),
-  Safari selbst.
+- **Netflix „Schaust du noch?":** Bewusst nicht live getestet (erscheint erst
+  nach Stunden). Der Selektor `interrupt-autoplay-continue` ist im Netflix-
+  UI-Bundle enthalten, ebenso alle anderen verwendeten Selektoren.
+- **Safari selbst:** Abnahme durch dich, Checkliste unten.
 
 ## Abnahme in Safari (Checkliste)
 
