@@ -96,3 +96,28 @@ Die Netflix-Position von Rick and Morty und die Disney+-Position der Simpsons
   Video blieb pausiert. Das frühere Selbst-Beenden trat mit dem aktuellen Stand
   nicht mehr auf; die Schonfrist beim URL-Wechsel und der 3-px-Filter bleiben als
   Absicherung.
+
+## Analyse: einmaliges Selbst-Beenden nach dem Ende (Disney+, Build fe0a20b)
+
+Befund damals: 20 s nach „done" war die Sitzung aus, die URL zeigte bereits die
+nächste Folge, die „Als Nächstes"-Karte war offen, Lautstärke 1, Video pausiert.
+Disney+ hatte also trotz unseres Pausierens zur nächsten Folge weitergeschaltet.
+In den drei späteren Durchläufen (01c42b2 und neuer) schaltete Disney+ im
+„done"-Zustand nicht weiter, und die Sitzung blieb jeweils 20 s bis 2 min stabil.
+
+Mögliche Auslöser für `exitSleep` sind nur: Taste Z, Panel-Schalter, Aufwachen
+durch echte Eingabe, Teardown beim Verlassen der Player-URL. Eingaben gab es
+keine. Bleibt der Teardown: fe0a20b hatte noch keine Schonfrist, ein kurzer
+Zwischenzustand der URL beim Disney-Folgenübergang hätte sofort abgebaut. Seit
+01c42b2 gilt eine Schonfrist von 6 s, und das Protokoll würde „player-url
+verlassen" vermerken. Zusätzlich zählen nur noch echte Mausbewegungen ab 3 px.
+Nicht reproduzierbar, Ursache mit hoher Wahrscheinlichkeit abgedeckt; in Safari
+beobachten, ob nach dem Ende eine Folge ohne Eingabe weiterläuft.
+
+## Installation in Safari vorbereitet
+
+`dist/schlummer.user.js` liegt in
+`~/Library/Containers/com.userscripts.macos.Userscripts-Extension/Data/Documents/scripts/`,
+dem Standardordner der Userscripts-App. Verbleibende Schritte für den Nutzer:
+Userscripts in Safari aktivieren, für netflix.com und disneyplus.com erlauben,
+Seite neu laden.
