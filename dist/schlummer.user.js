@@ -664,6 +664,7 @@
   var INTERACT_COOLDOWN_MS = 1e4;
   var WAKE_GRACE_MS = 2e3;
   var WAKE_MOVE_PX = 12;
+  var MOVE_MIN_PX = 3;
   var USER_VOLUME_WINDOW_MS = 1500;
   var CLICK_REPEAT_MS = 1500;
   var RESTORE_MS = 6e3;
@@ -865,8 +866,10 @@
       const t = now();
       if (e.type === "mousedown" || e.type === "keydown" || e.type === "wheel" || e.type === "touchstart") lastUserInputAt = t;
       if (e.type === "mousemove") {
-        if (lastMouse) doneMoved += Math.hypot(e.clientX - lastMouse.x, e.clientY - lastMouse.y);
+        const dist = lastMouse ? Math.hypot(e.clientX - lastMouse.x, e.clientY - lastMouse.y) : 0;
         lastMouse = { x: e.clientX, y: e.clientY };
+        if (dist < MOVE_MIN_PX) return;
+        doneMoved += dist;
       }
       if (!mounted) return;
       if (e.type === "keydown" && isZ(e)) {

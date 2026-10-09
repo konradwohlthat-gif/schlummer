@@ -8,6 +8,7 @@ const POLL_MS = 250;
 const INTERACT_COOLDOWN_MS = 10000; // nach einer Verlängerung
 const WAKE_GRACE_MS = 2000;         // nach dem Ende: so lange keine Aufwach-Erkennung
 const WAKE_MOVE_PX = 12;            // Mindest-Mausbewegung zum Aufwachen
+const MOVE_MIN_PX = 3;              // kleinere "Bewegungen" sind Browser-Artefakte (Layoutwechsel unter dem Zeiger)
 const USER_VOLUME_WINDOW_MS = 1500; // Lautstärkeänderung kurz nach Eingabe = Nutzer
 const CLICK_REPEAT_MS = 1500;
 const RESTORE_MS = 6000;            // nach dem Ausschalten: Lautstärke auf neue Video-Elemente nachziehen
@@ -220,8 +221,10 @@ export function startController({ adapter, settings, doc = document, win = windo
     const t = now();
     if (e.type === 'mousedown' || e.type === 'keydown' || e.type === 'wheel' || e.type === 'touchstart') lastUserInputAt = t;
     if (e.type === 'mousemove') {
-      if (lastMouse) doneMoved += Math.hypot(e.clientX - lastMouse.x, e.clientY - lastMouse.y);
+      const dist = lastMouse ? Math.hypot(e.clientX - lastMouse.x, e.clientY - lastMouse.y) : 0;
       lastMouse = { x: e.clientX, y: e.clientY };
+      if (dist < MOVE_MIN_PX) return; // Chrome feuert mousemove ohne Bewegung bei Layoutänderungen
+      doneMoved += dist;
     }
     if (!mounted) return;
     if (e.type === 'keydown' && isZ(e)) {
