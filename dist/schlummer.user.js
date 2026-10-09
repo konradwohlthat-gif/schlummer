@@ -22,17 +22,6 @@
     const el = root.querySelector(sel);
     return el && el.isConnected && el.getClientRects().length > 0 ? el : null;
   }
-  function findButtonByText(patterns, { root = document, exclude = null } = {}) {
-    const buttons = root.querySelectorAll('button, [role="button"]');
-    for (const b of buttons) {
-      if (exclude && b.closest(exclude)) continue;
-      const txt = (b.textContent || "").trim();
-      for (const p of patterns) {
-        if (p.test(txt) && b.getClientRects().length > 0) return b;
-      }
-    }
-    return null;
-  }
   function fullscreenRoot(doc = document) {
     return doc.fullscreenElement || doc.webkitFullscreenElement || doc.body;
   }
@@ -59,7 +48,39 @@
   };
 
   // src/adapters/disney.js
-  var CONTROLS = '[data-testid="controls-container"], .controls__footer, .btm-media-overlays-container .controls, [class*="control-bar"], [class*="controls-footer"]';
+  var WAKE_EVERY_MS = 5e3;
+  var lastWake = 0;
+  var durationCache = /* @__PURE__ */ new Map();
+  function shadowButton(tag) {
+    const host = document.querySelector(tag);
+    const root = host && host.shadowRoot;
+    if (!root) return null;
+    const b = root.querySelector("button");
+    return b && b.getClientRects().length > 0 ? b : null;
+  }
+  function readSliderMax() {
+    const host = document.querySelector("main-app-controls-overlay");
+    const root = host && host.shadowRoot;
+    if (!root) return null;
+    const roots = [root];
+    for (const el of root.querySelectorAll("*")) if (el.shadowRoot) roots.push(el.shadowRoot);
+    for (const r of roots) {
+      const s = r.querySelector("[aria-valuemax]");
+      const max = s && Number(s.getAttribute("aria-valuemax"));
+      if (max && Number.isFinite(max) && max > 60) return max;
+    }
+    return null;
+  }
+  function wakeControls() {
+    const t = Date.now();
+    if (t - lastWake < WAKE_EVERY_MS) return;
+    lastWake = t;
+    const target = document.querySelector("pointer-actions") || document.querySelector("disney-web-player-ui") || document.body;
+    try {
+      target.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, composed: true, clientX: 10, clientY: 10 }));
+    } catch {
+    }
+  }
   var disney = {
     id: "disney",
     name: "Disney+",
@@ -67,12 +88,26 @@
     matches: (loc) => /(^|\.)disneyplus\.com$/i.test(loc.hostname),
     isPlayerPage: () => /\/(video|play)\//.test(location.pathname),
     episodeId: () => (location.pathname.match(/\/(?:video|play)\/([^/?#]+)/) || [])[1] || null,
-    getVideo: () => document.querySelector("video"),
-    // Selektoren werden an der Live-Seite verifiziert. Text-Fallbacks ignorieren die Steuerleiste.
-    findSkipIntro: () => visibleQuery('[data-testid="skip-intro"]') || findButtonByText([/^intro überspringen$/i, /^skip intro$/i], { exclude: CONTROLS }),
-    findSkipRecap: () => visibleQuery('[data-testid="skip-recap"]') || findButtonByText([/^(rückblick|zusammenfassung) überspringen$/i, /^skip recap$/i], { exclude: CONTROLS }),
-    findNextEpisode: () => visibleQuery('[data-testid="up-next-play-button"]') || null,
-    findStillWatching: () => null,
+    getVideo: () => {
+      const vids = [...document.querySelectorAll("video")];
+      return vids.find((v) => v.id === "hivePlayer1" || v.classList.contains("hive-video")) || vids.find((v) => v.readyState > 0) || vids[0] || null;
+    },
+    getDuration: (video) => {
+      if (video && Number.isFinite(video.duration) && video.duration > 0) return video.duration;
+      const key = disney.episodeId();
+      const fromSlider = readSliderMax();
+      if (fromSlider) {
+        if (key) durationCache.set(key, fromSlider);
+        return fromSlider;
+      }
+      if (key && durationCache.has(key)) return durationCache.get(key);
+      wakeControls();
+      return NaN;
+    },
+    findSkipIntro: () => shadowButton("skip-overlay"),
+    findSkipRecap: () => null,
+    findNextEpisode: () => shadowButton("up-next-lite-v1"),
+    findStillWatching: () => shadowButton("inactivity-overlay"),
     isSeriesEnd: () => false,
     fullscreenRoot: () => fullscreenRoot(document)
   };
@@ -622,8 +657,13 @@
     let restore = null;
     let holdPauseUntil = 0;
     const clickedAt = /* @__PURE__ */ new WeakMap();
-    const hasMeta = (v) => !!v && Number.isFinite(v.duration) && v.duration > 0;
-    const stats = (v) => ({ duration: hasMeta(v) ? v.duration : 0, currentTime: v.currentTime || 0, ended: !!(v.ended || endedFlag) });
+    const durationOf = (v) => adapter.getDuration ? adapter.getDuration(v) : v.duration;
+    const hasMeta = (v) => {
+      if (!v) return false;
+      const d = durationOf(v);
+      return Number.isFinite(d) && d > 0;
+    };
+    const stats = (v) => ({ duration: hasMeta(v) ? durationOf(v) : 0, currentTime: v.currentTime || 0, ended: !!(v.ended || endedFlag) });
     const visible = (el) => !!el && el.isConnected && el.getClientRects().length > 0;
     function clickOnce(el) {
       if (!visible(el)) return false;
@@ -757,7 +797,7 @@
     function switchReady(ps) {
       if (!video || !hasMeta(video)) return false;
       if (video !== ps.oldVideo) return true;
-      if (Math.abs(video.duration - ps.prev.duration) > 1) return true;
+      if (Math.abs(durationOf(video) - ps.prev.duration) > 1) return true;
       if (video.currentTime < ps.prev.currentTime - 5) return true;
       return now() - ps.at > SWITCH_TIMEOUT_MS;
     }
