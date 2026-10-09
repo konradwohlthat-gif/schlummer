@@ -3,7 +3,8 @@ import { loadSettings } from './settings.js';
 import { startController } from './controller.js';
 
 (async () => {
-  if (window.top !== window) return;
+  // Kein window.top-Vergleich: In Safaris isolierter Skript-Welt kann er fehlschlagen.
+  // iframes werden über @noframes im Header ausgeschlossen.
   const adapter = pickAdapter(location);
   if (!adapter) return;
   // Vorherige Instanz (Entwicklung: erneutes Einspielen) sauber beenden

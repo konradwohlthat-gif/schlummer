@@ -1077,7 +1077,6 @@
 
   // src/main.js
   (async () => {
-    if (window.top !== window) return;
     const adapter = pickAdapter(location);
     if (!adapter) return;
     try {
