@@ -94,8 +94,10 @@ export function startController({ adapter, settings, doc = document, win = windo
   }
 
   // ---------- Schlafmodus ----------
-  function startSleep() {
+  function startSleep(attempt = 0) {
     if (!video || !hasMeta(video)) {
+      // Disney+ liefert die Dauer erst, wenn die Steuerleiste gerendert ist (Adapter weckt sie).
+      if (attempt < 4) { setTimeout(() => { if (!session) startSleep(attempt + 1); }, 400); return; }
       panel.notice('Kein laufendes Video gefunden');
       return;
     }

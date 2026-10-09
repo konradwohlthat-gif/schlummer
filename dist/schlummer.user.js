@@ -744,8 +744,14 @@
       const paused = video && video.paused ? " · pausiert" : "";
       return { active: true, text: `Folge ${idx} von ${session.totalPlanned} · ${Math.round(p * 100)} %${paused}` };
     }
-    function startSleep() {
+    function startSleep(attempt = 0) {
       if (!video || !hasMeta(video)) {
+        if (attempt < 4) {
+          setTimeout(() => {
+            if (!session) startSleep(attempt + 1);
+          }, 400);
+          return;
+        }
         panel.notice("Kein laufendes Video gefunden");
         return;
       }
