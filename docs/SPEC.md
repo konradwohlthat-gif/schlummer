@@ -170,8 +170,11 @@ Regeln im Schlafmodus:
 ## Bedienung
 
 - **Panel** oben rechts im Player, dunkler Look im Stil des Anbieters.
-  Erscheint bei Mausbewegung, verschwindet nach ca. 3 s ohne Bewegung,
-  bleibt bei Hover. Im Vollbild innerhalb des Vollbild-Elements.
+  Taste Z öffnet und schließt es (Änderung vom 2026-10-09: nicht mehr bei
+  Mausbewegung). Es schließt sich auch bei Klick daneben oder nach 10 s ohne
+  Mauskontakt. Kurze Hinweise („+1 Folge nachgelegt") erscheinen bei
+  geschlossenem Panel als kleine Einblendung für 3 s. Im Vollbild innerhalb
+  des Vollbild-Elements.
   Nicht in die Anbieter-Leiste eingehängt (deren Aufbau ändert sich oft).
 - **Inhalt:** Schalter Schlafmodus, Folgenanzahl mit − / + (1 bis 10),
   Schalter Intro, Schalter Abspann. Im laufenden Modus Status
@@ -182,8 +185,8 @@ Regeln im Schlafmodus:
   Jeder Wert hat einen Standard und wird nach Änderung dauerhaft gespeichert,
   der geänderte Wert ist damit der neue Standard des Nutzers. Ein Knopf
   „Standardwerte" setzt alle Einstellungen zurück.
-- **Taste Z** schaltet den Schlafmodus mit der gespeicherten Folgenanzahl
-  ein oder aus. (S ist bei Netflix belegt.)
+- **Taste Z** öffnet und schließt das Panel. Der Schlafmodus wird über den
+  Schalter im Panel ein- und ausgeschaltet. (S ist bei Netflix belegt.)
 - **Folgenanzahl:** Beim allerersten Mal 1, danach wird der zuletzt genutzte
   Wert gemerkt.
 - **Speicher:** `GM.setValue`/`GM.getValue`, Fallback `localStorage`.

@@ -32,12 +32,12 @@ selbst dunkel.
 
 ## Bedienung
 
-Starte eine Folge und **bewege die Maus**. Oben rechts erscheint das
-Schlummer-Panel.
+Starte eine Folge und drücke **Z**. Oben rechts erscheint das
+Schlummer-Panel. Z schließt es wieder, ebenso ein Klick daneben.
 
 | Element | Bedeutung |
 |---|---|
-| **Schlafmodus** | Ein/Aus. Taste **Z** macht dasselbe. |
+| **Schlafmodus** | Ein/Aus. |
 | **− 1 +** | Anzahl der Folgen, bis Bild und Ton ganz weg sind. Wird gemerkt. |
 | **Intro überspringen** | Klickt „Intro überspringen" und „Zusammenfassung überspringen". |
 | **Abspann überspringen** | Klickt „Nächste Folge", sobald der Abspann beginnt. |

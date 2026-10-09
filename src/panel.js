@@ -1,7 +1,8 @@
 // Bedienpanel oben rechts im Player. Erscheint bei Mausbewegung, verschwindet nach Ruhe.
 import { DEFAULTS } from './settings.js';
 
-const HIDE_AFTER_MS = 3000;
+const HIDE_AFTER_MS = 10000; // offenes Panel schließt sich nach Ruhe, außer die Maus liegt darauf
+const TOAST_MS = 3000;
 
 const CSS = `
 .schlummer-panel{position:fixed;top:72px;right:24px;z-index:2147483100;width:300px;box-sizing:border-box;
@@ -39,6 +40,10 @@ const CSS = `
 .schlummer-btn:hover{background:#4a4a4a}
 .schlummer-hint{font-size:11px;color:#777;margin-top:8px}
 .schlummer-notice{font-size:12px;color:#fff;background:var(--schlummer-accent);border-radius:6px;padding:4px 8px;margin:4px 0}
+.schlummer-toast{position:fixed;top:72px;right:24px;z-index:2147483099;background:rgba(18,18,18,.94);color:#fff;
+  font:13px/1.3 -apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;border-radius:8px;padding:8px 12px;
+  box-shadow:0 8px 32px rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s;border-left:3px solid var(--schlummer-accent)}
+.schlummer-toast.is-visible{opacity:1}
 `;
 
 function installStyles(doc) {
@@ -83,6 +88,8 @@ export function createPanel({ settings, onSettingChange, onSleepToggle, getStatu
   let hideTimer = null;
   let hovered = false;
   let noticeTimer = null;
+  let toastTimer = null;
+  const toast = h(doc, 'div', { class: 'schlummer-toast', role: 'status' });
 
   const sleepSwitch = h(doc, 'input', { type: 'checkbox', class: 'schlummer-switch', id: 'schlummer-sleep', onchange: () => onSleepToggle() });
   const introSwitch = h(doc, 'input', { type: 'checkbox', class: 'schlummer-switch', id: 'schlummer-intro', onchange: (e) => onSettingChange('skipIntro', e.target.checked) });
@@ -131,9 +138,10 @@ export function createPanel({ settings, onSettingChange, onSleepToggle, getStatu
       blue.row,
       h(doc, 'button', { type: 'button', class: 'schlummer-btn', text: 'Standardwerte', onclick: () => { for (const [k, v] of Object.entries(DEFAULTS)) onSettingChange(k, v); } }),
     ]),
-    h(doc, 'div', { class: 'schlummer-hint', text: 'Folgen = Anzahl der Folgen, bis Bild und Ton ganz weg sind. Maus bewegen zeigt dieses Panel.' }),
+    h(doc, 'div', { class: 'schlummer-hint', text: 'Folgen = Anzahl der Folgen, bis Bild und Ton ganz weg sind. Taste Z öffnet und schließt dieses Panel.' }),
   ]);
   el.style.setProperty('--schlummer-accent', accent);
+  toast.style.setProperty('--schlummer-accent', accent);
 
   for (const t of STOP_EVENTS) el.addEventListener(t, (e) => e.stopPropagation());
   el.addEventListener('mouseenter', () => { hovered = true; clearTimeout(hideTimer); });
@@ -162,12 +170,14 @@ export function createPanel({ settings, onSettingChange, onSleepToggle, getStatu
     el,
     mount(r) {
       if (!r) return;
-      if (root === r && el.parentNode === r) return;
+      if (root === r && el.parentNode === r && toast.parentNode === r) return;
       root = r;
       r.appendChild(el);
+      r.appendChild(toast);
     },
     unmount() {
       el.remove();
+      toast.remove();
       root = null;
       el.classList.remove('is-visible');
     },
@@ -179,15 +189,30 @@ export function createPanel({ settings, onSettingChange, onSleepToggle, getStatu
       clearTimeout(hideTimer);
       el.classList.remove('is-visible');
     },
+    toggle() {
+      if (el.classList.contains('is-visible')) this.hide();
+      else this.show();
+    },
+    isVisible() {
+      return el.classList.contains('is-visible');
+    },
     isInside(node) {
       return !!(node && node instanceof Node && el.contains(node));
     },
-    notice(text, ms = 3000) {
-      notice.textContent = text;
-      notice.style.display = '';
-      clearTimeout(noticeTimer);
-      noticeTimer = setTimeout(() => { notice.style.display = 'none'; }, ms);
-      this.show();
+    /** Kurze Meldung: im offenen Panel als Zeile, sonst als kleine Einblendung. */
+    notice(text, ms = TOAST_MS) {
+      if (this.isVisible()) {
+        notice.textContent = text;
+        notice.style.display = '';
+        clearTimeout(noticeTimer);
+        noticeTimer = setTimeout(() => { notice.style.display = 'none'; }, ms);
+        scheduleHide();
+        return;
+      }
+      toast.textContent = text;
+      toast.classList.add('is-visible');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('is-visible'), ms);
     },
     update,
   };

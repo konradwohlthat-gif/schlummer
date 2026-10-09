@@ -220,15 +220,14 @@ export function startController({ adapter, settings, doc = document, win = windo
     }
     if (!mounted) return;
     if (e.type === 'keydown' && isZ(e)) {
+      // Z öffnet und schließt nur das Panel. Schlafmodus wird im Panel geschaltet.
       e.stopPropagation();
       e.preventDefault();
-      if (session && session.done) exitSleep();
-      else toggleSleep();
-      panel.show();
+      panel.toggle();
       panel.update();
       return;
     }
-    panel.show();
+    if (e.type === 'mousedown' && panel.isVisible() && !panel.isInside(e.target)) panel.hide();
     if (!session) return;
     if (panel.isInside(e.target)) return;
     if (session.done) {
